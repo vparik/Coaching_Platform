@@ -132,3 +132,24 @@ After every session where something is built or changed:
 - If a new table is added to the schema, add it to the data model table above.
 
 This keeps context load fast for future sessions — read the relevant tab doc before touching that feature.
+
+---
+
+## Implementation docs
+
+When touching an existing feature, read the matching file in `docs/implementations/` before making changes — it documents the non-obvious decisions and gotchas from the original build.
+
+After building something non-trivial, write an implementation doc following `docs/implementations/IMPLEMENTATIONS_AGENT.md`.
+
+---
+
+## Handling ideas
+
+When the user shares a new feature idea, follow the process in `docs/Ideas/IDEAS_AGENT.md` exactly.
+
+Key rules:
+- Read the existing codebase before writing — connect the idea to what's already built
+- Use the standard template (every section mandatory)
+- Give a direct, honest opinion — don't just validate
+- Always end with a recommended build order
+- Save to `docs/Ideas/idea-[name].md` and update the index table in `IDEAS_AGENT.md`
