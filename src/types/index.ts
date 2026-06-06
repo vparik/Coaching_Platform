@@ -54,10 +54,17 @@ export interface BoardBall {
   y: number
 }
 
+export interface BoardFrame {
+  players: BoardPlayer[]
+  balls: BoardBall[]
+}
+
 export interface BoardData {
   scenario: BoardScenario
-  players: BoardPlayer[]
   lines: BoardLine[]
+  frames: BoardFrame[]
+  // legacy fields kept for migration from pre-animation saves
+  players?: BoardPlayer[]
   balls?: BoardBall[]
 }
 
