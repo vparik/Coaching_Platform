@@ -15,7 +15,15 @@ export default async function DashboardPage() {
   const teamId = profile?.team_id
 
   const today = new Date().toISOString().split('T')[0]
-  const weekEnd = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
+
+  // Current week Mon–Sun (UTC)
+  const utcDay = new Date().getUTCDay()
+  const weekStartMs = Date.now() - (utcDay === 0 ? 6 : utcDay - 1) * 86400000
+  const weekStartStr = new Date(weekStartMs).toISOString().split('T')[0]
+  const weekEndStr = new Date(weekStartMs + 6 * 86400000).toISOString().split('T')[0]
+  const weekDays = Array.from({ length: 7 }, (_, i) =>
+    new Date(new Date(weekStartStr + 'T00:00:00Z').getTime() + i * 86400000).toISOString().split('T')[0]
+  )
 
   const [
     { data: nextMatch },
@@ -35,8 +43,8 @@ export default async function DashboardPage() {
       .from('training_sessions')
       .select('*')
       .eq('team_id', teamId)
-      .gte('date', today)
-      .lte('date', weekEnd)
+      .gte('date', weekStartStr)
+      .lte('date', weekEndStr)
       .order('date', { ascending: true }),
     supabase
       .from('players')
@@ -59,6 +67,12 @@ export default async function DashboardPage() {
     : null
 
   const prepDone = nextMatch?.prep_done || (nextMatch?.match_preps && nextMatch.match_preps.length > 0)
+
+  const sessionsByDate = (trainingSessions ?? []).reduce<Record<string, { id: string; intensity: string; objective: string; time: string | null }[]>>((acc, s) => {
+    if (!acc[s.date]) acc[s.date] = []
+    acc[s.date].push(s)
+    return acc
+  }, {})
 
   return (
     <div className="space-y-6">
@@ -113,43 +127,56 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* Training this week */}
+      {/* Training this week — mini calendar */}
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Training This Week</h2>
           <Link href="/training" className="text-green-400 text-xs hover:text-green-300">View all</Link>
         </div>
-        {trainingSessions && trainingSessions.length > 0 ? (
-          <div className="space-y-2">
-            {trainingSessions.map(session => (
-              <div key={session.id} className="bg-gray-900 rounded-xl px-4 py-3 border border-gray-800 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-white">{session.objective}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {new Date(session.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}
-                    {session.time && ` · ${session.time}`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
-                    session.intensity === 'high' ? 'bg-red-500/20 text-red-400' :
-                    session.intensity === 'medium' ? 'bg-amber-500/20 text-amber-400' :
-                    'bg-blue-500/20 text-blue-400'
-                  }`}>
-                    {session.intensity}
-                  </span>
-                </div>
-              </div>
-            ))}
+        <Link href="/training" className="block group">
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 group-hover:border-gray-700 transition-colors">
+            <div className="grid grid-cols-7 gap-1.5">
+              {weekDays.map(dateStr => {
+                const daySessions = sessionsByDate[dateStr] ?? []
+                const isToday = dateStr === today
+                const isPast = dateStr < today
+                const isMatchDay = nextMatch?.date === dateStr
+                const dayDate = new Date(dateStr + 'T12:00:00')
+                const dayLabel = dayDate.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 2)
+
+                return (
+                  <div key={dateStr} className="flex flex-col min-h-[80px]">
+                    {/* Day header */}
+                    <div className={`text-center pb-1.5 mb-1.5 border-b ${isToday ? 'border-green-500/40' : 'border-gray-800'}`}>
+                      <p className="text-[10px] font-medium text-gray-600 uppercase">{dayLabel}</p>
+                      <p className={`text-sm font-bold leading-tight ${isToday ? 'text-green-400' : isPast ? 'text-gray-600' : 'text-gray-300'}`}>
+                        {dayDate.getDate()}
+                      </p>
+                      {isMatchDay && <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 mt-0.5" />}
+                    </div>
+
+                    {/* Session blocks */}
+                    <div className="flex flex-col gap-1">
+                      {daySessions.map((s, i) => (
+                        <div key={i} className={`rounded px-1 py-1 ${
+                          s.intensity === 'high'   ? 'bg-red-500/15 border border-red-500/20' :
+                          s.intensity === 'medium' ? 'bg-amber-500/15 border border-amber-500/20' :
+                                                     'bg-blue-500/15 border border-blue-500/20'
+                        }`}>
+                          <p className="text-[10px] text-white leading-tight line-clamp-2 break-words">{s.objective}</p>
+                          {s.time && <p className="text-[9px] text-gray-500 mt-0.5">{s.time}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            {(trainingSessions ?? []).length === 0 && (
+              <p className="text-xs text-gray-600 text-center mt-2">No sessions planned — tap to add</p>
+            )}
           </div>
-        ) : (
-          <div className="bg-gray-900 rounded-xl p-4 border border-gray-800 border-dashed text-center">
-            <p className="text-gray-500 text-sm">No sessions planned</p>
-            <Link href="/training" className="text-green-400 text-sm hover:text-green-300 mt-1 inline-block">
-              Plan training
-            </Link>
-          </div>
-        )}
+        </Link>
       </section>
 
       {/* Squad Status */}
