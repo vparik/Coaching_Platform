@@ -1,6 +1,6 @@
 # Idea: Training Exercise Animator
 
-**Status:** Under review  
+**Status:** Built  
 **Type:** New feature — Training tab expansion or standalone board  
 **Related:** idea-tactical-animations.md (same animation engine, different canvas and purpose)
 

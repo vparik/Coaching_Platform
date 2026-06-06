@@ -64,3 +64,73 @@ Click the × on a session card (desktop hover), the Delete button inside the edi
 - Match data is fetched on the training page and passed to the client — match days show as reference markers without requiring navigation to Match Log.
 - Intensity is colour-coded consistently (blue / amber / red). Load dots give a per-day physical load summary at a glance.
 - The Dashboard "Training This Week" widget still pulls from today through the next 7 days of this data.
+
+---
+
+## Exercise Library (Library tab)
+
+A personal library of reusable training exercises accessible via the **Library** tab in the Training header.
+
+Each exercise has: name, category, default duration (minutes), description.
+
+**Categories:** Warm-up / Technical / Tactical / Physical / Set Piece / Cool-down / General
+
+Exercises are grouped by category in the library view. Actions per exercise: Edit, Delete, Board.
+
+### Session builder
+
+When creating or editing a session, the Training Plan section lets coaches build an ordered list of blocks. Each block is either:
+- **From Library** — pick an exercise from a grouped dropdown; duration pre-fills from exercise default
+- **Custom** — free-text one-liner for one-off items
+
+Blocks are reorderable (↑ ↓ arrows) and the total duration is summed automatically.
+
+---
+
+## Drill Board (`/training/board?id=<exercise-id>`)
+
+Each library exercise has an animated drill board. Accessed via the **Board** button on the exercise card.
+
+### Layout
+Side-by-side on the board page: canvas on the left, controls on the right. Expand button (⤢) opens a fullscreen modal.
+
+### Scenarios (canvas backgrounds)
+Blank · Full Pitch · Half Pitch · Final Third · Small Grid · Corridor
+
+### Elements
+- **Players**: Blue / Red / Yellow circles, auto-numbered per colour. Add / Remove per colour group. Draggable.
+- **Ball**: Football icon (~half player size). Add / Remove. Draggable.
+- **Lines**: Zone lines drawn as solid or dashed yellow lines. Click start → click end. Undo last line. Lines are static — they persist across all frames.
+- **Movement arrows**: Shown on the canvas when not playing — dashed arrows from current frame positions to next frame positions.
+
+### Animation (Phase 2)
+Frame-by-frame keyframe animation with smooth interpolation.
+
+**Frame strip** — row of numbered frame buttons below the canvas. Click to jump to a frame. Hover to reveal delete ×. `+` adds a new frame (copies current positions as starting point).
+
+**Playback controls:**
+- ▶ Play / ⏸ Pause
+- ◀ ▶ Step through frames
+- ↺ Reset to frame 1
+- Speed: Slow (0.5×) / Normal (1×) / Fast (2×)
+- Loop toggle
+
+Playback uses `requestAnimationFrame` with linear interpolation between keyframes — players and ball lerp smoothly between recorded positions matched by ID.
+
+### Data model
+Board data is stored as `board jsonb` on the `exercises` table.
+
+```json
+{
+  "scenario": "full-pitch",
+  "lines": [{ "id": "...", "x1": 30, "y1": 0, "x2": 30, "y2": 140, "style": "dashed" }],
+  "frames": [
+    { "players": [{ "id": "b1", "color": "blue", "label": "1", "x": 45, "y": 60 }], "balls": [] },
+    { "players": [{ "id": "b1", "color": "blue", "label": "1", "x": 70, "y": 40 }], "balls": [] }
+  ]
+}
+```
+
+Coordinates are absolute within the `100×140` viewBox (not 0–1 relative — unlike tactics board).
+
+SQL migration required: `ALTER TABLE exercises ADD COLUMN IF NOT EXISTS board jsonb;`
