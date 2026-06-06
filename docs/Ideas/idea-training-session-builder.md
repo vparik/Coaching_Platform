@@ -1,6 +1,6 @@
 # Idea: Training Session Builder — Exercise Library + Structured Sessions
 
-**Status:** Under review  
+**Status:** Built  
 **Type:** Training tab — full rethink  
 **Related:** idea-training-exercise-animator.md (exercises can have animations attached)
 

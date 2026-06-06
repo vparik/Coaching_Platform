@@ -124,5 +124,6 @@ If all six are answered, the doc is complete.
 | `idea-training-exercise-animator.md` | Animated training drill board with scenarios, variable players, zone lines |
 | `idea-training-session-builder.md` | Exercise library + structured session builder replacing free-text objective field |
 | `idea-coach-community.md` | Coach profiles, follow system, exercise ratings, team discovery — future vision |
+| `idea-training-week-calendar.md` | Week grid calendar view for the training tab — day columns, week navigation, mobile day-strip |
 
 Update this index every time a new idea doc is created.

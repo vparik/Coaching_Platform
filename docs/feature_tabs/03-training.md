@@ -2,7 +2,7 @@
 
 **Route:** `/training`
 
-The Training Planner lets the coach build and manage the week-by-week training schedule. Sessions are grouped by week so the coach can see the full load at a glance.
+The Training Planner has two views toggled by a **Week / List** button in the header. The default is the **Week calendar view**.
 
 ---
 
@@ -33,20 +33,34 @@ The Training Planner lets the coach build and manage the week-by-week training s
 
 ---
 
+## Week view (default)
+
+- `<` / `>` arrows navigate week-by-week (Mon–Sun). "Today" snaps back to the current week.
+- **Desktop:** 7-column grid — one column per day. Sessions appear as cards inside the day column. Hover a card to reveal a delete ×. Click a card to edit. Click "+ Add" at the bottom of any column to add a session with the date pre-filled.
+- **Mobile:** horizontal day strip — tap a day to select it and see its sessions below. A dot on the strip indicates sessions exist. A small amber dot marks match days.
+- Each column shows intensity load dots (blue / amber / red) beneath the session cards.
+- Match days show an amber "vs Opponent" badge in the column header.
+
+## List view
+
+Sessions grouped into "This Week", "Next Week", and "Week of …" buckets. The "+ New Session" button appears in list view only. Edit and delete buttons on each card.
+
 ## Actions
 
 ### Add a session
-Tap "+ Add Session" to open the inline form. Fill in the fields and submit — the session is added to the correct week group.
+**Week view:** Click `+ Add` on any day column (desktop) or "Add session for this day" (mobile) — date is pre-filled. Fill in the remaining fields and submit.
+**List view:** Tap "+ New Session" in the header.
 
 ### Edit a session
-Tap the edit icon on a session card to update it.
+Click a session card to open the edit form (pre-filled). A Delete button is also available inside the edit form.
 
 ### Delete a session
-Tap the delete icon on a session card to remove it.
+Click the × on a session card (desktop hover), the Delete button inside the edit form, or the Delete button on the mobile session card.
 
 ---
 
 ## Key behaviour
-- Sessions are grouped into labelled week buckets: "This Week", "Next Week", and specific date ranges for further weeks.
-- The Dashboard "Training This Week" widget pulls from today through the next 7 days of this data.
-- Intensity is colour-coded consistently across the app (blue / amber / red) so coaches can read load balance at a glance.
+- Week view always opens on the current week.
+- Match data is fetched on the training page and passed to the client — match days show as reference markers without requiring navigation to Match Log.
+- Intensity is colour-coded consistently (blue / amber / red). Load dots give a per-day physical load summary at a glance.
+- The Dashboard "Training This Week" widget still pulls from today through the next 7 days of this data.

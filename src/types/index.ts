@@ -29,6 +29,28 @@ export interface Player {
   created_at: string
 }
 
+export type ExerciseCategory = 'warm-up' | 'technical' | 'tactical' | 'physical' | 'set-piece' | 'cool-down' | 'general'
+
+export interface Exercise {
+  id: string
+  team_id: string
+  name: string
+  category: ExerciseCategory
+  default_duration: number
+  description: string | null
+  created_at: string
+}
+
+export interface SessionBlock {
+  id: string
+  session_id: string
+  exercise_id: string | null
+  free_text: string | null
+  duration: number
+  position: number
+  exercises?: { id: string; name: string; category: ExerciseCategory } | null
+}
+
 export interface TrainingSession {
   id: string
   team_id: string
@@ -39,6 +61,7 @@ export interface TrainingSession {
   phase: 'recovery' | 'prep' | 'development'
   notes: string | null
   created_at: string
+  session_blocks?: SessionBlock[]
 }
 
 export interface Match {

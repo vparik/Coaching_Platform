@@ -11,11 +11,33 @@ export default async function TrainingPage() {
     .eq('id', user!.id)
     .single()
 
-  const { data: sessions } = await supabase
-    .from('training_sessions')
-    .select('*')
-    .eq('team_id', profile?.team_id)
-    .order('date', { ascending: true })
+  const [{ data: sessionsRaw }, { data: matches }, { data: exercises }] = await Promise.all([
+    supabase
+      .from('training_sessions')
+      .select('*, session_blocks(id, exercise_id, free_text, duration, position, exercises(id, name, category))')
+      .eq('team_id', profile?.team_id)
+      .order('date', { ascending: true }),
+    supabase
+      .from('matches')
+      .select('id, opponent, date, venue')
+      .eq('team_id', profile?.team_id)
+      .order('date', { ascending: true }),
+    supabase
+      .from('exercises')
+      .select('*')
+      .eq('team_id', profile?.team_id)
+      .order('name', { ascending: true }),
+  ])
 
-  return <TrainingClient sessions={sessions ?? []} teamId={profile?.team_id} />
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sessions = (sessionsRaw ?? []) as any[]
+
+  return (
+    <TrainingClient
+      sessions={sessions}
+      teamId={profile?.team_id}
+      matches={matches ?? []}
+      exercises={exercises ?? []}
+    />
+  )
 }
