@@ -31,6 +31,36 @@ export interface Player {
 
 export type ExerciseCategory = 'warm-up' | 'technical' | 'tactical' | 'physical' | 'set-piece' | 'cool-down' | 'general'
 
+export type BoardScenario = 'blank' | 'full-pitch' | 'half-pitch' | 'final-third' | 'small-grid' | 'wide-corridor'
+
+export interface BoardPlayer {
+  id: string
+  color: 'blue' | 'red' | 'yellow'
+  label: string
+  x: number
+  y: number
+}
+
+export interface BoardLine {
+  id: string
+  x1: number; y1: number
+  x2: number; y2: number
+  style: 'solid' | 'dashed'
+}
+
+export interface BoardBall {
+  id: string
+  x: number
+  y: number
+}
+
+export interface BoardData {
+  scenario: BoardScenario
+  players: BoardPlayer[]
+  lines: BoardLine[]
+  balls?: BoardBall[]
+}
+
 export interface Exercise {
   id: string
   team_id: string
@@ -38,6 +68,7 @@ export interface Exercise {
   category: ExerciseCategory
   default_duration: number
   description: string | null
+  board: BoardData | null
   created_at: string
 }
 

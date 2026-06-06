@@ -4,9 +4,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { TrainingSession, Exercise, SessionBlock, ExerciseCategory } from '@/types'
+import Link from 'next/link'
 import {
   Plus, X, Trash2, Pencil, ChevronLeft, ChevronRight,
-  Calendar, List, BookOpen, ChevronUp, ChevronDown,
+  Calendar, List, BookOpen, ChevronUp, ChevronDown, Layout,
 } from 'lucide-react'
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -578,6 +579,7 @@ export default function TrainingClient({
                         {ex.description && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{ex.description}</p>}
                       </div>
                       <div className="flex gap-3 ml-3">
+                        <Link href={`/training/board?id=${ex.id}`} className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300"><Layout size={12} /> Board</Link>
                         <button onClick={() => startEditExercise(ex)} className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"><Pencil size={12} /> Edit</button>
                         <button onClick={() => deleteExercise(ex.id)} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300"><Trash2 size={12} /> Delete</button>
                       </div>
