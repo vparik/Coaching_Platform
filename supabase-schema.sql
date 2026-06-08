@@ -75,6 +75,10 @@ create table match_preps (
   key_players text,
   set_piece_tendencies text,
   match_brief text,
+  lineup_formation text,
+  lineup_starters jsonb,
+  lineup_subs jsonb,
+  lineup_published boolean default false,
   created_at timestamptz default now()
 );
 

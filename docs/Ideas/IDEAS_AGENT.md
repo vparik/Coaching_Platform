@@ -125,5 +125,9 @@ If all six are answered, the doc is complete.
 | `idea-training-session-builder.md` | Exercise library + structured session builder replacing free-text objective field |
 | `idea-coach-community.md` | Coach profiles, follow system, exercise ratings, team discovery — future vision |
 | `idea-training-week-calendar.md` | Week grid calendar view for the training tab — day columns, week navigation, mobile day-strip |
+| `idea-training-attendance.md` | Per-session player RSVP (attending/not attending), coach sees live count + per-player breakdown |
+| `idea-match-lineup.md` | Lineup builder as a second tab in Match Prep — formation picker, 11 position slots, subs bench |
+| `idea-free-drawing-tool.md` | Freehand drawing layer on the tactics board — ephemeral whiteboard, 3-color palette, mode toggle between drag and draw |
+| `idea-match-player-notes.md` | Per-player notes in the lineup + LLM-generated match report from notes, stats, and match context |
 
 Update this index every time a new idea doc is created.

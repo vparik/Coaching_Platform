@@ -9,11 +9,11 @@ import { Tactic, PlayerPos } from '@/types'
 // Coordinates are relative (0–1). Our team occupies the bottom half (y ~0.53–0.93).
 // Opponent positions are the vertical mirror: y_opp = 1 − y_our.
 
-function mirror(positions: PlayerPos[]): PlayerPos[] {
+export function mirror(positions: PlayerPos[]): PlayerPos[] {
   return positions.map(p => ({ ...p, y: parseFloat((1 - p.y).toFixed(4)) }))
 }
 
-const OUR_FORMATIONS: Record<string, PlayerPos[]> = {
+export const OUR_FORMATIONS: Record<string, PlayerPos[]> = {
   '4-4-2': [
     { id: 'GK',  label: 'GK',  x: 0.50, y: 0.93 },
     { id: 'RB',  label: 'RB',  x: 0.82, y: 0.79 },
@@ -94,7 +94,7 @@ const OUR_FORMATIONS: Record<string, PlayerPos[]> = {
   ],
 }
 
-const FORMATION_NAMES = Object.keys(OUR_FORMATIONS)
+export const FORMATION_NAMES = Object.keys(OUR_FORMATIONS)
 const DEFAULT_FORMATION = '4-4-2'
 
 // ─── PitchSVG ─────────────────────────────────────────────────────────────────

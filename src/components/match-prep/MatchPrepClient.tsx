@@ -3,17 +3,28 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Match, MatchPrep } from '@/types'
+import { Match, MatchPrep, Player } from '@/types'
 import { Plus, X, ChevronDown, ChevronUp, CheckCircle2, FileText } from 'lucide-react'
+import LineupPanel from './LineupPanel'
 
 type MatchWithPrep = Match & { match_preps: MatchPrep[] }
+type SquadPlayer = Pick<Player, 'id' | 'name' | 'position' | 'availability_status'>
 
 const FORMATIONS = ['4-4-2', '4-3-3', '4-2-3-1', '3-5-2', '3-4-3', '5-3-2', '4-1-4-1', '4-5-1', '4-4-1-1']
 
-export default function MatchPrepClient({ matches, teamId }: { matches: MatchWithPrep[]; teamId: string | null | undefined }) {
+export default function MatchPrepClient({
+  matches,
+  players,
+  teamId,
+}: {
+  matches: MatchWithPrep[]
+  players: SquadPlayer[]
+  teamId: string | null | undefined
+}) {
   const [showMatchForm, setShowMatchForm] = useState(false)
   const [activePrepId, setActivePrepId] = useState<string | null>(null)
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null)
+  const [matchTab, setMatchTab] = useState<Record<string, 'scouting' | 'lineup'>>({})
   const router = useRouter()
   const supabase = createClient()
 
@@ -22,6 +33,19 @@ export default function MatchPrepClient({ matches, teamId }: { matches: MatchWit
     opponent_formation: '', opponent_style: '', opponent_strengths: '',
     opponent_weaknesses: '', key_players: '', set_piece_tendencies: '',
   })
+
+  function toggleExpand(matchId: string) {
+    if (expandedMatch === matchId) {
+      setExpandedMatch(null)
+      setActivePrepId(null)
+    } else {
+      setExpandedMatch(matchId)
+    }
+  }
+
+  function openTab(matchId: string, tab: 'scouting' | 'lineup') {
+    setMatchTab(prev => ({ ...prev, [matchId]: tab }))
+  }
 
   async function createMatch(e: React.FormEvent) {
     e.preventDefault()
@@ -35,15 +59,12 @@ export default function MatchPrepClient({ matches, teamId }: { matches: MatchWit
   async function savePrep(matchId: string) {
     const match = matches.find(m => m.id === matchId)
     const existingPrep = match?.match_preps?.[0]
-
     const payload = { match_id: matchId, ...prepForm }
-
     if (existingPrep) {
       await supabase.from('match_preps').update(payload).eq('id', existingPrep.id)
     } else {
       await supabase.from('match_preps').insert(payload)
     }
-
     await supabase.from('matches').update({ prep_done: true }).eq('id', matchId)
     setActivePrepId(null)
     router.refresh()
@@ -60,6 +81,8 @@ export default function MatchPrepClient({ matches, teamId }: { matches: MatchWit
       set_piece_tendencies: existing?.set_piece_tendencies ?? '',
     })
     setActivePrepId(match.id)
+    setExpandedMatch(match.id)
+    setMatchTab(prev => ({ ...prev, [match.id]: 'scouting' }))
   }
 
   return (
@@ -122,10 +145,12 @@ export default function MatchPrepClient({ matches, teamId }: { matches: MatchWit
           const prep = match.match_preps?.[0]
           const isActive = activePrepId === match.id
           const isExpanded = expandedMatch === match.id
+          const currentTab = matchTab[match.id] ?? 'scouting'
           const daysAway = Math.ceil((new Date(match.date).getTime() - Date.now()) / 86400000)
 
           return (
             <div key={match.id} className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+              {/* Card header */}
               <div className="px-4 py-4">
                 <div className="flex items-start justify-between">
                   <div>
@@ -144,11 +169,9 @@ export default function MatchPrepClient({ matches, teamId }: { matches: MatchWit
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {prep && (
-                      <button onClick={() => setExpandedMatch(isExpanded ? null : match.id)} className="text-gray-500 hover:text-white">
-                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                      </button>
-                    )}
+                    <button onClick={() => toggleExpand(match.id)} className="text-gray-500 hover:text-white transition-colors">
+                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
                     <button
                       onClick={() => isActive ? setActivePrepId(null) : startPrep(match)}
                       className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
@@ -164,89 +187,120 @@ export default function MatchPrepClient({ matches, teamId }: { matches: MatchWit
                 </div>
               </div>
 
-              {/* Brief view */}
-              {isExpanded && prep && (
-                <div className="border-t border-gray-800 px-4 py-4 space-y-3">
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Match Brief</h4>
-                  {prep.opponent_formation && (
-                    <div><span className="text-xs text-gray-500">Formation: </span><span className="text-sm text-white">{prep.opponent_formation}</span></div>
-                  )}
-                  {prep.opponent_style && (
-                    <div><span className="text-xs text-gray-500">Style: </span><span className="text-sm text-white">{prep.opponent_style}</span></div>
-                  )}
-                  {prep.opponent_strengths && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Strengths</p>
-                      <p className="text-sm text-white">{prep.opponent_strengths}</p>
-                    </div>
-                  )}
-                  {prep.opponent_weaknesses && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Weaknesses</p>
-                      <p className="text-sm text-white">{prep.opponent_weaknesses}</p>
-                    </div>
-                  )}
-                  {prep.key_players && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Key Players to Watch</p>
-                      <p className="text-sm text-white">{prep.key_players}</p>
-                    </div>
-                  )}
-                  {prep.set_piece_tendencies && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Set Pieces</p>
-                      <p className="text-sm text-white">{prep.set_piece_tendencies}</p>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Expanded panel */}
+              {isExpanded && (
+                <div className="border-t border-gray-800">
+                  {/* Tab bar */}
+                  <div className="flex border-b border-gray-800 px-1">
+                    {(['scouting', 'lineup'] as const).map(tab => (
+                      <button
+                        key={tab}
+                        onClick={() => openTab(match.id, tab)}
+                        className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
+                          currentTab === tab
+                            ? 'border-green-500 text-white'
+                            : 'border-transparent text-gray-500 hover:text-gray-300'
+                        }`}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
 
-              {/* Prep form */}
-              {isActive && (
-                <div className="border-t border-gray-800 px-4 py-4 space-y-4">
-                  <h4 className="text-sm font-semibold text-white">Opponent Analysis — {match.opponent}</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Formation</label>
-                      <select value={prepForm.opponent_formation} onChange={e => setPrepForm({ ...prepForm, opponent_formation: e.target.value })}
-                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
-                        <option value="">Select</option>
-                        {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Playing Style</label>
-                      <input value={prepForm.opponent_style} onChange={e => setPrepForm({ ...prepForm, opponent_style: e.target.value })}
-                        placeholder="e.g. High press, direct play"
-                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Strengths</label>
-                      <textarea value={prepForm.opponent_strengths} onChange={e => setPrepForm({ ...prepForm, opponent_strengths: e.target.value })}
-                        rows={3} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Weaknesses</label>
-                      <textarea value={prepForm.opponent_weaknesses} onChange={e => setPrepForm({ ...prepForm, opponent_weaknesses: e.target.value })}
-                        rows={3} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Key Players to Watch</label>
-                      <textarea value={prepForm.key_players} onChange={e => setPrepForm({ ...prepForm, key_players: e.target.value })}
-                        rows={2} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Set-Piece Tendencies</label>
-                      <textarea value={prepForm.set_piece_tendencies} onChange={e => setPrepForm({ ...prepForm, set_piece_tendencies: e.target.value })}
-                        rows={2} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none" />
-                    </div>
-                  </div>
-                  <div className="flex gap-3 pt-1">
-                    <button onClick={() => savePrep(match.id)} className="bg-green-600 hover:bg-green-500 text-white text-sm font-medium px-5 py-2.5 rounded-lg">
-                      Save Match Brief
-                    </button>
-                    <button onClick={() => setActivePrepId(null)} className="text-gray-400 text-sm px-4 py-2.5 hover:text-white">Cancel</button>
-                  </div>
+                  {/* Scouting tab */}
+                  {currentTab === 'scouting' && (
+                    isActive ? (
+                      <div className="px-4 py-4 space-y-4">
+                        <h4 className="text-sm font-semibold text-white">Opponent Analysis — {match.opponent}</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Formation</label>
+                            <select value={prepForm.opponent_formation} onChange={e => setPrepForm({ ...prepForm, opponent_formation: e.target.value })}
+                              className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500">
+                              <option value="">Select</option>
+                              {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Playing Style</label>
+                            <input value={prepForm.opponent_style} onChange={e => setPrepForm({ ...prepForm, opponent_style: e.target.value })}
+                              placeholder="e.g. High press, direct play"
+                              className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Strengths</label>
+                            <textarea value={prepForm.opponent_strengths} onChange={e => setPrepForm({ ...prepForm, opponent_strengths: e.target.value })}
+                              rows={3} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Weaknesses</label>
+                            <textarea value={prepForm.opponent_weaknesses} onChange={e => setPrepForm({ ...prepForm, opponent_weaknesses: e.target.value })}
+                              rows={3} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Key Players to Watch</label>
+                            <textarea value={prepForm.key_players} onChange={e => setPrepForm({ ...prepForm, key_players: e.target.value })}
+                              rows={2} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Set-Piece Tendencies</label>
+                            <textarea value={prepForm.set_piece_tendencies} onChange={e => setPrepForm({ ...prepForm, set_piece_tendencies: e.target.value })}
+                              rows={2} className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none" />
+                          </div>
+                        </div>
+                        <div className="flex gap-3 pt-1">
+                          <button onClick={() => savePrep(match.id)} className="bg-green-600 hover:bg-green-500 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+                            Save Match Brief
+                          </button>
+                          <button onClick={() => setActivePrepId(null)} className="text-gray-400 text-sm px-4 py-2.5 hover:text-white transition-colors">Cancel</button>
+                        </div>
+                      </div>
+                    ) : prep ? (
+                      <div className="px-4 py-4 space-y-3">
+                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Match Brief</h4>
+                        {prep.opponent_formation && (
+                          <div><span className="text-xs text-gray-500">Formation: </span><span className="text-sm text-white">{prep.opponent_formation}</span></div>
+                        )}
+                        {prep.opponent_style && (
+                          <div><span className="text-xs text-gray-500">Style: </span><span className="text-sm text-white">{prep.opponent_style}</span></div>
+                        )}
+                        {prep.opponent_strengths && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Strengths</p>
+                            <p className="text-sm text-white">{prep.opponent_strengths}</p>
+                          </div>
+                        )}
+                        {prep.opponent_weaknesses && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Weaknesses</p>
+                            <p className="text-sm text-white">{prep.opponent_weaknesses}</p>
+                          </div>
+                        )}
+                        {prep.key_players && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Key Players to Watch</p>
+                            <p className="text-sm text-white">{prep.key_players}</p>
+                          </div>
+                        )}
+                        {prep.set_piece_tendencies && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Set Pieces</p>
+                            <p className="text-sm text-white">{prep.set_piece_tendencies}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="px-4 py-8 text-center">
+                        <p className="text-gray-500 text-sm">No scouting data yet.</p>
+                        <p className="text-gray-600 text-xs mt-1">Click "Start Prep" to add opponent analysis.</p>
+                      </div>
+                    )
+                  )}
+
+                  {/* Lineup tab */}
+                  {currentTab === 'lineup' && (
+                    <LineupPanel match={match} players={players} />
+                  )}
                 </div>
               )}
             </div>

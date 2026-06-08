@@ -114,6 +114,14 @@ export interface Match {
   created_at: string
 }
 
+export interface LineupStarter {
+  id: string          // slot key: 'GK', 'CB1', 'RW', etc.
+  label: string       // position label shown on pitch
+  player_id: string | null
+  x: number           // 0–1 relative to viewBox width
+  y: number           // 0–1 relative to viewBox height
+}
+
 export interface MatchPrep {
   id: string
   match_id: string
@@ -124,6 +132,10 @@ export interface MatchPrep {
   key_players: string | null
   set_piece_tendencies: string | null
   match_brief: string | null
+  lineup_formation: string | null
+  lineup_starters: LineupStarter[] | null
+  lineup_subs: string[] | null
+  lineup_published: boolean
   created_at: string
 }
 

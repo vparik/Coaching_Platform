@@ -18,5 +18,11 @@ export default async function MatchPrepPage() {
     .gte('date', new Date().toISOString().split('T')[0])
     .order('date', { ascending: true })
 
-  return <MatchPrepClient matches={matches ?? []} teamId={profile?.team_id} />
+  const { data: players } = await supabase
+    .from('players')
+    .select('id, name, position, availability_status')
+    .eq('team_id', profile?.team_id)
+    .order('name')
+
+  return <MatchPrepClient matches={matches ?? []} players={players ?? []} teamId={profile?.team_id} />
 }
