@@ -194,6 +194,91 @@ A fast build tool and development server for JavaScript/TypeScript projects. Com
 
 ---
 
+## How It All Works — End to End
+
+This section explains the full picture in plain language: what each piece is, where it runs, and how a single user action travels through the whole system.
+
+---
+
+### What Next.js actually is
+
+Next.js is a framework built on top of React. React alone just renders UI in the browser. Next.js adds:
+
+- **A server** — your app doesn't just run in the browser; there's a Node.js server that runs code before the page reaches the user
+- **Routing** — the folder structure in `src/app/` *is* the routes. `app/(app)/squad/page.tsx` → `/squad`
+- **Two types of components**: Server Components (run on the server, fetch data, never sent as JS to the browser) and Client Components (run in the browser, handle clicks, forms, state)
+
+In this platform, every `page.tsx` is a Server Component — it fetches data from Supabase using a server-side client and hands it to the Client Component as props. The Client Component renders the UI and handles user interactions.
+
+---
+
+### Where the server actually is
+
+When you run `npm run dev`, Next.js starts a Node.js server on your machine at `localhost:3000`.
+
+When you deploy to Vercel, Vercel runs that same server in their infrastructure. The `page.tsx` Server Components execute on Vercel's servers on every request — the user never sees that code, only the HTML result.
+
+The Client Components (`'use client'`) get bundled as JavaScript and sent to the browser. They run on the user's device.
+
+---
+
+### What Supabase actually is
+
+You needed a database and an auth system without building a backend from scratch. Supabase gives you:
+
+- **Postgres database** — a real relational database, not a toy
+- **Auth** — login, signup, session management, JWT tokens, all built in
+- **Row Level Security (RLS)** — database-level rules that ensure a coach can only ever read their own team's data, even if the app code has a bug
+- **A JavaScript client** — `supabase.from('players').select(...)` works both server-side and in the browser
+
+Supabase runs on their servers. Your app never stores passwords or manages sessions directly — it delegates all of that to Supabase.
+
+In short: **there is no custom backend in this project. Supabase is the backend.**
+
+---
+
+### A full request — step by step
+
+A coach opens `/squad`:
+
+```
+1. Browser requests /squad
+
+2. Next.js server (Vercel / localhost)
+   → page.tsx runs on the server
+   → creates a server-side Supabase client (reads auth cookie)
+   → queries: SELECT * FROM players WHERE team_id = '...'
+   → Supabase (their servers, Postgres) returns rows
+
+3. page.tsx passes rows as props to <SquadClient />
+   → Next.js renders HTML and sends it to the browser
+
+4. Browser receives fully-rendered HTML (fast, visible immediately)
+   → React "hydrates" — SquadClient becomes interactive
+
+5. Coach adds a player
+   → SquadClient calls Supabase directly from the browser
+   → INSERT INTO players ...
+   → router.refresh() → triggers the whole flow again from step 1
+```
+
+The key insight: **data fetching happens on the server, mutations happen in the browser, and `router.refresh()` is the bridge between them.**
+
+---
+
+### Why this combination
+
+| Problem | Solution |
+|---|---|
+| Need a server without building one | Next.js App Router |
+| Need a database without managing infrastructure | Supabase Postgres |
+| Need auth without building it | Supabase Auth |
+| Need the UI to feel fast | Server Components pre-render HTML |
+| Need mutations to feel instant | Client Components talk directly to Supabase |
+| Need data to never leak between coaches | Supabase RLS policies |
+
+---
+
 ## Core Tradeoff
 
 This stack was chosen to optimize for **speed of iteration by a small team building an MVP**, at the cost of **flexibility and long-term scale**. Both Supabase and Next.js App Router would need to be revisited if the app grows to require complex multi-role permissions, heavy analytics, or a dedicated backend engineering team.

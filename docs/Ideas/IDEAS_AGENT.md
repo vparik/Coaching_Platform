@@ -129,5 +129,6 @@ If all six are answered, the doc is complete.
 | `idea-match-lineup.md` | Lineup builder as a second tab in Match Prep — formation picker, 11 position slots, subs bench |
 | `idea-free-drawing-tool.md` | Freehand drawing layer on the tactics board — ephemeral whiteboard, 3-color palette, mode toggle between drag and draw |
 | `idea-match-player-notes.md` | Per-player notes in the lineup + LLM-generated match report from notes, stats, and match context |
+| `idea-gps-wearables-live-board.md` | Real-time live board from GPS vest data — player positions, heatmaps, distance/sprint stats per session |
 
 Update this index every time a new idea doc is created.

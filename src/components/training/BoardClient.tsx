@@ -8,7 +8,7 @@ import {
 } from '@/types'
 import {
   ArrowLeft, Plus, Minus, Trash2, Circle, Maximize2, X,
-  Play, Pause, ChevronLeft, ChevronRight, RefreshCw,
+  Play, Pause, ChevronLeft, ChevronRight, RefreshCw, RotateCw,
 } from 'lucide-react'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -196,6 +196,7 @@ type BoardSVGProps = {
   activeTool: 'select' | 'line'
   lineStart: { x: number; y: number } | null
   isPlaying: boolean
+  orientation: 'vertical' | 'horizontal'
   svgRef: React.RefObject<SVGSVGElement | null>
   onPointerMove: (e: React.PointerEvent<SVGSVGElement>) => void
   onPointerUp: () => void
@@ -205,14 +206,15 @@ type BoardSVGProps = {
 }
 
 function BoardSVG({
-  scenario, lines, frame, arrows, dragging, activeTool, lineStart, isPlaying,
+  scenario, lines, frame, arrows, dragging, activeTool, lineStart, isPlaying, orientation,
   svgRef, onPointerMove, onPointerUp, onSvgClick, onDraggablePointerDown, className,
 }: BoardSVGProps) {
+  const isH = orientation === 'horizontal'
   const cursor = isPlaying ? 'default' : activeTool === 'line' ? 'crosshair' : dragging ? 'grabbing' : 'default'
   return (
     <svg
       ref={svgRef}
-      viewBox={`0 0 ${VB_W} ${VB_H}`}
+      viewBox={isH ? `0 0 ${VB_H} ${VB_W}` : `0 0 ${VB_W} ${VB_H}`}
       className={`touch-none select-none ${className ?? ''}`}
       style={{ cursor, display: 'block' }}
       onPointerMove={isPlaying ? undefined : onPointerMove}
@@ -226,48 +228,50 @@ function BoardSVG({
         </marker>
       </defs>
 
-      <PitchLines scenario={scenario} />
+      <g transform={isH ? `translate(0 ${VB_W}) rotate(-90)` : undefined}>
+        <PitchLines scenario={scenario} />
 
-      {/* Static zone lines */}
-      {lines.map(ln => (
-        <line key={ln.id} x1={ln.x1} y1={ln.y1} x2={ln.x2} y2={ln.y2}
-          stroke="rgba(255,255,0,0.85)" strokeWidth="1.2"
-          strokeDasharray={ln.style === 'dashed' ? '4 3' : undefined}
-          strokeLinecap="round" />
-      ))}
+        {/* Static zone lines */}
+        {lines.map(ln => (
+          <line key={ln.id} x1={ln.x1} y1={ln.y1} x2={ln.x2} y2={ln.y2}
+            stroke="rgba(255,255,0,0.85)" strokeWidth="1.2"
+            strokeDasharray={ln.style === 'dashed' ? '4 3' : undefined}
+            strokeLinecap="round" />
+        ))}
 
-      {/* Movement arrows (next-frame preview) */}
-      {arrows.map(a => (
-        <line key={`arrow-${a.id}`} x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2}
-          stroke={a.color} strokeWidth="1" strokeDasharray="2.5 1.5"
-          markerEnd="url(#ah)" opacity="0.8" />
-      ))}
+        {/* Movement arrows (next-frame preview) */}
+        {arrows.map(a => (
+          <line key={`arrow-${a.id}`} x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2}
+            stroke={a.color} strokeWidth="1" strokeDasharray="2.5 1.5"
+            markerEnd="url(#ah)" opacity="0.8" />
+        ))}
 
-      {/* Line-in-progress */}
-      {lineStart && <circle cx={lineStart.x} cy={lineStart.y} r="1.5" fill="yellow" opacity="0.8" />}
+        {/* Line-in-progress */}
+        {lineStart && <circle cx={lineStart.x} cy={lineStart.y} r="1.5" fill="yellow" opacity="0.8" />}
 
-      {/* Players */}
-      {frame.players.map(p => {
-        const col = PLAYER_COLORS.find(c => c.id === p.color)!
-        return (
-          <g key={p.id} transform={`translate(${p.x} ${p.y})`}
-            onPointerDown={isPlaying ? undefined : e => onDraggablePointerDown(e, p.id)}
+        {/* Players */}
+        {frame.players.map(p => {
+          const col = PLAYER_COLORS.find(c => c.id === p.color)!
+          return (
+            <g key={p.id} transform={`translate(${p.x} ${p.y})`}
+              onPointerDown={isPlaying ? undefined : e => onDraggablePointerDown(e, p.id)}
+              style={{ cursor: isPlaying ? 'default' : activeTool === 'select' ? 'grab' : 'default' }}>
+              <circle r="4" fill={col.fill} stroke={col.stroke} strokeWidth="0.7" opacity="0.95" />
+              <text textAnchor="middle" dominantBaseline="central" fill="white" fontSize="3" fontWeight="bold"
+                style={{ pointerEvents: 'none', userSelect: 'none' }}>{p.label}</text>
+            </g>
+          )
+        })}
+
+        {/* Balls */}
+        {frame.balls.map(b => (
+          <g key={b.id} transform={`translate(${b.x} ${b.y})`}
+            onPointerDown={isPlaying ? undefined : e => onDraggablePointerDown(e, b.id)}
             style={{ cursor: isPlaying ? 'default' : activeTool === 'select' ? 'grab' : 'default' }}>
-            <circle r="4" fill={col.fill} stroke={col.stroke} strokeWidth="0.7" opacity="0.95" />
-            <text textAnchor="middle" dominantBaseline="central" fill="white" fontSize="3" fontWeight="bold"
-              style={{ pointerEvents: 'none', userSelect: 'none' }}>{p.label}</text>
+            <g transform="scale(0.42)"><FootballIcon /></g>
           </g>
-        )
-      })}
-
-      {/* Balls */}
-      {frame.balls.map(b => (
-        <g key={b.id} transform={`translate(${b.x} ${b.y})`}
-          onPointerDown={isPlaying ? undefined : e => onDraggablePointerDown(e, b.id)}
-          style={{ cursor: isPlaying ? 'default' : activeTool === 'select' ? 'grab' : 'default' }}>
-          <g transform="scale(0.42)"><FootballIcon /></g>
-        </g>
-      ))}
+        ))}
+      </g>
     </svg>
   )
 }
@@ -535,6 +539,8 @@ export default function BoardClient({ exercise }: { exercise: Exercise }) {
   // ── UI state ──
   const [isMaximized, setIsMaximized] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [orientation, setOrientation] = useState<'vertical' | 'horizontal'>('vertical')
+  const isHorizontal = orientation === 'horizontal'
 
   const inlineSvgRef = useRef<SVGSVGElement>(null)
   const modalSvgRef = useRef<SVGSVGElement>(null)
@@ -557,9 +563,16 @@ export default function BoardClient({ exercise }: { exercise: Exercise }) {
   // ── Coord helpers ──
   function svgCoords(e: React.PointerEvent, ref: React.RefObject<SVGSVGElement | null>) {
     const rect = ref.current!.getBoundingClientRect()
+    if (!isHorizontal) {
+      return {
+        x: Math.min(VB_W, Math.max(0, ((e.clientX - rect.left) / rect.width) * VB_W)),
+        y: Math.min(VB_H, Math.max(0, ((e.clientY - rect.top) / rect.height) * VB_H)),
+      }
+    }
+    // Horizontal: screen-x maps to original y-axis, screen-y maps to inverted original x-axis
     return {
-      x: Math.min(VB_W, Math.max(0, ((e.clientX - rect.left) / rect.width) * VB_W)),
-      y: Math.min(VB_H, Math.max(0, ((e.clientY - rect.top) / rect.height) * VB_H)),
+      x: Math.min(VB_W, Math.max(0, VB_W * (1 - (e.clientY - rect.top) / rect.height))),
+      y: Math.min(VB_H, Math.max(0, VB_H * (e.clientX - rect.left) / rect.width)),
     }
   }
 
@@ -631,8 +644,12 @@ export default function BoardClient({ exercise }: { exercise: Exercise }) {
     return (e: React.MouseEvent<SVGSVGElement>) => {
       if (activeTool !== 'line') return
       const rect = ref.current!.getBoundingClientRect()
-      const x = ((e.clientX - rect.left) / rect.width) * VB_W
-      const y = ((e.clientY - rect.top) / rect.height) * VB_H
+      const x = isHorizontal
+        ? VB_W * (1 - (e.clientY - rect.top) / rect.height)
+        : ((e.clientX - rect.left) / rect.width) * VB_W
+      const y = isHorizontal
+        ? VB_H * (e.clientX - rect.left) / rect.width
+        : ((e.clientY - rect.top) / rect.height) * VB_H
       if (!lineStart) {
         setLineStart({ x, y })
       } else {
@@ -735,6 +752,7 @@ export default function BoardClient({ exercise }: { exercise: Exercise }) {
     activeTool,
     lineStart,
     isPlaying,
+    orientation,
     svgRef: ref,
     onPointerMove: makeMoveHandler(ref),
     onPointerUp: handlePointerUp,
@@ -761,15 +779,23 @@ export default function BoardClient({ exercise }: { exercise: Exercise }) {
   // ── Inline layout ─────────────────────────────────────────────────────────
 
   const canvasBlock = (ref: React.RefObject<SVGSVGElement | null>, withExpand = false) => (
-    <div className="relative flex-shrink-0" style={{ width: 'min(55vw, 260px)' }}>
+    <div className={`relative ${isHorizontal ? 'w-full' : 'flex-shrink-0'}`} style={isHorizontal ? undefined : { width: 'min(55vw, 260px)' }}>
       <div className="rounded-xl overflow-hidden border border-gray-800">
         <BoardSVG {...sharedSvgProps(ref)} className="w-full" />
       </div>
       {withExpand && (
-        <button onClick={() => setIsMaximized(true)} title="Expand"
-          className="absolute bottom-2 right-2 bg-black/60 hover:bg-black/90 text-white p-1.5 rounded-lg transition-colors">
-          <Maximize2 size={14} />
-        </button>
+        <>
+          <button
+            onClick={() => setOrientation(o => o === 'vertical' ? 'horizontal' : 'vertical')}
+            title="Rotate board"
+            className="absolute bottom-2 left-2 bg-black/60 hover:bg-black/90 text-white p-1.5 rounded-lg transition-colors">
+            <RotateCw size={14} />
+          </button>
+          <button onClick={() => setIsMaximized(true)} title="Expand"
+            className="absolute bottom-2 right-2 bg-black/60 hover:bg-black/90 text-white p-1.5 rounded-lg transition-colors">
+            <Maximize2 size={14} />
+          </button>
+        </>
       )}
     </div>
   )
@@ -805,10 +831,10 @@ export default function BoardClient({ exercise }: { exercise: Exercise }) {
           ))}
         </div>
 
-        {/* Side-by-side */}
-        <div className="flex gap-4 items-start">
+        {/* Canvas + controls — stacked when horizontal, side-by-side when vertical */}
+        <div className={`flex gap-4 ${isHorizontal ? 'flex-col' : 'items-start'}`}>
           {canvasBlock(inlineSvgRef, true)}
-          <div className="flex-1 min-w-0">
+          <div className={isHorizontal ? 'w-full' : 'flex-1 min-w-0'}>
             <ControlsPanel {...controlsProps} />
           </div>
         </div>
@@ -827,13 +853,19 @@ export default function BoardClient({ exercise }: { exercise: Exercise }) {
       {isMaximized && (
         <div className="fixed inset-0 bg-black/95 z-50 overflow-hidden">
           <div className="h-full overflow-y-auto">
-            <div className="flex flex-col gap-4 p-4 max-w-md mx-auto pb-8">
+            <div className={`flex flex-col gap-4 p-4 ${isHorizontal ? 'max-w-2xl' : 'max-w-md'} mx-auto pb-8`}>
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
                   <p className="text-white font-bold truncate">{exercise.name}</p>
                   <p className="text-xs text-gray-500">{board.frames.length} frame{board.frames.length !== 1 ? 's' : ''}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => setOrientation(o => o === 'vertical' ? 'horizontal' : 'vertical')}
+                    title="Rotate board"
+                    className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800 transition-colors">
+                    <RotateCw size={18} />
+                  </button>
                   <button onClick={save} disabled={saving}
                     className="bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
                     {saving ? 'Saving…' : 'Save'}
