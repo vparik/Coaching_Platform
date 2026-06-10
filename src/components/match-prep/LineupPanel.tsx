@@ -129,7 +129,7 @@ function LineupPitchSVG({ starters, oppPositions, selectedSlotId, playerMap, dra
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function LineupPanel({ match, players }: { match: MatchWithPrep; players: SquadPlayer[] }) {
+export default function LineupPanel({ match, players, readOnly = false }: { match: MatchWithPrep; players: SquadPlayer[]; readOnly?: boolean }) {
   const prep = match.match_preps?.[0]
 
   const initOurFormation = prep?.lineup_formation ?? '4-4-2'
@@ -282,11 +282,14 @@ export default function LineupPanel({ match, players }: { match: MatchWithPrep; 
     : { suggested: [], others: pickerCandidates }
   const availableForSubs = players.filter(p => !allAssigned.has(p.id))
 
+  const noop = () => {}
   const pitchProps: Omit<PitchProps, 'className'> = {
-    starters, oppPositions, selectedSlotId, playerMap, dragging, orientation,
-    onPointerDown: handlePointerDown,
-    onPointerMove: handlePointerMove,
-    onPointerUp: handlePointerUp,
+    starters, oppPositions, playerMap, orientation,
+    selectedSlotId: readOnly ? null : selectedSlotId,
+    dragging: readOnly ? null : dragging,
+    onPointerDown: readOnly ? noop as never : handlePointerDown,
+    onPointerMove: readOnly ? noop as never : handlePointerMove,
+    onPointerUp: readOnly ? noop as never : handlePointerUp,
   }
 
   // ── Shared UI blocks ──────────────────────────────────────────────────────────
@@ -415,14 +418,25 @@ export default function LineupPanel({ match, players }: { match: MatchWithPrep; 
         </div>
 
         {teamLegend}
-        {playerPicker}
-        {bench}
-
-        <button onClick={save} disabled={saving}
-          className="flex items-center gap-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-          <Save size={14} />
-          {saving ? 'Saving…' : 'Save Lineup'}
-        </button>
+        {!readOnly && playerPicker}
+        {!readOnly ? bench : subs.length > 0 && (
+          <div>
+            <p className="text-xs text-gray-500 mb-1.5">Bench</p>
+            <div className="flex flex-wrap gap-1.5">
+              {subs.map(pid => {
+                const p = playerMap.get(pid)
+                return p ? <span key={pid} className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded-full">{p.name}</span> : null
+              })}
+            </div>
+          </div>
+        )}
+        {!readOnly && (
+          <button onClick={save} disabled={saving}
+            className="flex items-center gap-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            <Save size={14} />
+            {saving ? 'Saving…' : 'Save Lineup'}
+          </button>
+        )}
       </div>
 
       {/* ── Fullscreen modal ─────────────────────────────────────────────────── */}
@@ -446,27 +460,28 @@ export default function LineupPanel({ match, players }: { match: MatchWithPrep; 
               </div>
 
               <FormationSelectors
-            ourFormation={ourFormation}
-            oppFormation={oppFormation}
-            onChange={(team, f) => team === 'our' ? changeOurFormation(f) : changeOppFormation(f)}
-            onSwap={swapSides}
-            ourLabelClass="text-green-400"
-            ourFocusClass="focus:border-green-500"
-          />
+                ourFormation={ourFormation}
+                oppFormation={oppFormation}
+                onChange={(team, f) => team === 'our' ? changeOurFormation(f) : changeOppFormation(f)}
+                onSwap={swapSides}
+                ourLabelClass="text-green-400"
+                ourFocusClass="focus:border-green-500"
+              />
 
               <div className="rounded-xl overflow-hidden border border-gray-800">
                 <LineupPitchSVG {...pitchProps} />
               </div>
 
               {teamLegend}
-              {playerPicker}
-              {bench}
-
-              <button onClick={save} disabled={saving}
-                className="flex items-center gap-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-                <Save size={14} />
-                {saving ? 'Saving…' : 'Save Lineup'}
-              </button>
+              {!readOnly && playerPicker}
+              {!readOnly && bench}
+              {!readOnly && (
+                <button onClick={save} disabled={saving}
+                  className="flex items-center gap-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                  <Save size={14} />
+                  {saving ? 'Saving…' : 'Save Lineup'}
+                </button>
+              )}
             </div>
           </div>
         </div>

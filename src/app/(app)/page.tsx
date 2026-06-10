@@ -8,11 +8,12 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('team_id')
+    .select('team_id, role')
     .eq('id', user!.id)
     .single()
 
   const teamId = profile?.team_id
+  const isPlayer = profile?.role === 'player'
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -49,7 +50,8 @@ export default async function DashboardPage() {
     supabase
       .from('players')
       .select('*')
-      .eq('team_id', teamId),
+      .eq('team_id', teamId)
+      .is('left_at', null),
     supabase
       .from('team_messages')
       .select('*, profiles(name)')
@@ -110,6 +112,10 @@ export default async function DashboardPage() {
                 <span className="flex items-center gap-1.5 text-xs text-green-400">
                   <CheckCircle2 size={14} /> Match prep done
                 </span>
+              ) : isPlayer ? (
+                <span className="flex items-center gap-1.5 text-xs text-amber-400">
+                  <AlertCircle size={14} /> Prep not ready yet
+                </span>
               ) : (
                 <Link href="/match-prep" className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300">
                   <AlertCircle size={14} /> Match prep needed
@@ -120,9 +126,11 @@ export default async function DashboardPage() {
         ) : (
           <div className="bg-gray-900 rounded-xl p-4 border border-gray-800 border-dashed text-center">
             <p className="text-gray-500 text-sm">No upcoming match</p>
-            <Link href="/matches" className="text-green-400 text-sm hover:text-green-300 mt-1 inline-block">
-              Add a match
-            </Link>
+            {!isPlayer && (
+              <Link href="/matches" className="text-green-400 text-sm hover:text-green-300 mt-1 inline-block">
+                Add a match
+              </Link>
+            )}
           </div>
         )}
       </section>
@@ -173,7 +181,9 @@ export default async function DashboardPage() {
               })}
             </div>
             {(trainingSessions ?? []).length === 0 && (
-              <p className="text-xs text-gray-600 text-center mt-2">No sessions planned — tap to add</p>
+              <p className="text-xs text-gray-600 text-center mt-2">
+                {isPlayer ? 'No sessions this week' : 'No sessions planned — tap to add'}
+              </p>
             )}
           </div>
         </Link>
@@ -183,7 +193,7 @@ export default async function DashboardPage() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Squad Status</h2>
-          <Link href="/squad" className="text-green-400 text-xs hover:text-green-300">Manage</Link>
+          {!isPlayer && <Link href="/squad" className="text-green-400 text-xs hover:text-green-300">Manage</Link>}
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-gray-900 rounded-xl p-4 border border-gray-800 text-center">
@@ -221,9 +231,11 @@ export default async function DashboardPage() {
         ) : (
           <div className="bg-gray-900 rounded-xl p-4 border border-gray-800 border-dashed text-center">
             <p className="text-gray-500 text-sm">No messages yet</p>
-            <Link href="/team-hub" className="text-green-400 text-sm hover:text-green-300 mt-1 inline-block">
-              Post to squad
-            </Link>
+            {!isPlayer && (
+              <Link href="/team-hub" className="text-green-400 text-sm hover:text-green-300 mt-1 inline-block">
+                Post to squad
+              </Link>
+            )}
           </div>
         )}
       </section>

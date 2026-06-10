@@ -69,3 +69,14 @@ Saving a lineup creates a `match_preps` record if one doesn't exist yet (without
 - Each match can have exactly one prep record. Saving again updates the existing one rather than creating a duplicate.
 - The Dashboard "Next Match" card checks whether prep exists and shows an amber warning link if it has not been completed yet.
 - Only upcoming matches are shown here. Past matches move to the Match Log tab.
+
+---
+
+## Player view
+
+Players can access Match Prep to study upcoming fixtures. They see:
+- The match list (no Add Match button)
+- Scouting tab: read-only brief (no Edit Prep / Start Prep button, edit form never shown)
+- Lineup tab: read-only pitch with player assignments visible, no player picker, no bench editing, no Save button
+
+`LineupPanel` accepts a `readOnly` prop. In read-only mode, pointer events are replaced with no-ops and all mutation UI is hidden. The bench shows player names only (no remove/add buttons).

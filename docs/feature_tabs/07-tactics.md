@@ -119,3 +119,14 @@ The foundation laid in Phase 1 should not block these:
 - Drag and drop: native browser pointer events (no extra library needed for circles on SVG)
 - State management: local React state while editing; save to Supabase on explicit "Save" action
 - Follows the standard **server page + client component** pattern of the rest of the app
+
+---
+
+## Player view
+
+Players can access Tactics to study formations. They can:
+- Drag players on the pitch (interactive study — changes are not saved)
+- Change formations via the selectors
+- Load saved tactics from the dropdown
+
+Players cannot save new tactics or delete existing ones. The save input/button and delete button are hidden via the `role` prop.

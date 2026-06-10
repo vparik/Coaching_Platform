@@ -96,5 +96,6 @@ Examples: `impl-tactics-board.md`, `impl-squad-drag-drop.md`
 | File | Feature | Key decisions documented |
 |---|---|---|
 | `impl-tactics-board.md` | Tactics Board (Phase 1) | SVG D arc geometry, pointer capture bubbling, modal scroll, PitchSVG extraction |
+| `impl-player-access.md` | Player Access | Trigger search_path, middleware exclusion, claim redirect loop, embedded join RLS bug, ambiguous id in RETURNS TABLE |
 
 Update this table every time a new implementation doc is added.

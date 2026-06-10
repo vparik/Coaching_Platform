@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Match, MatchPrep, Player } from '@/types'
+import { Match, MatchPrep, Player, UserRole } from '@/types'
 import { Plus, X, ChevronDown, ChevronUp, CheckCircle2, FileText } from 'lucide-react'
 import LineupPanel from './LineupPanel'
 
@@ -16,10 +16,12 @@ export default function MatchPrepClient({
   matches,
   players,
   teamId,
+  role = 'coach',
 }: {
   matches: MatchWithPrep[]
   players: SquadPlayer[]
   teamId: string | null | undefined
+  role?: UserRole
 }) {
   const [showMatchForm, setShowMatchForm] = useState(false)
   const [activePrepId, setActivePrepId] = useState<string | null>(null)
@@ -90,17 +92,21 @@ export default function MatchPrepClient({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Match Preparation</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Scout your opponents, prepare your squad</p>
+          <p className="text-gray-400 text-sm mt-0.5">
+            {role === 'coach' ? 'Scout your opponents, prepare your squad' : 'Upcoming matches and team briefings'}
+          </p>
         </div>
-        <button
-          onClick={() => setShowMatchForm(true)}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={16} /> Add Match
-        </button>
+        {role === 'coach' && (
+          <button
+            onClick={() => setShowMatchForm(true)}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus size={16} /> Add Match
+          </button>
+        )}
       </div>
 
-      {showMatchForm && (
+      {showMatchForm && role === 'coach' && (
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-white">New Match</h2>
@@ -172,17 +178,19 @@ export default function MatchPrepClient({
                     <button onClick={() => toggleExpand(match.id)} className="text-gray-500 hover:text-white transition-colors">
                       {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </button>
-                    <button
-                      onClick={() => isActive ? setActivePrepId(null) : startPrep(match)}
-                      className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                        match.prep_done
-                          ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                          : 'bg-green-600 text-white hover:bg-green-500'
-                      }`}
-                    >
-                      <FileText size={13} />
-                      {match.prep_done ? 'Edit Prep' : 'Start Prep'}
-                    </button>
+                    {role === 'coach' && (
+                      <button
+                        onClick={() => isActive ? setActivePrepId(null) : startPrep(match)}
+                        className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                          match.prep_done
+                            ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                            : 'bg-green-600 text-white hover:bg-green-500'
+                        }`}
+                      >
+                        <FileText size={13} />
+                        {match.prep_done ? 'Edit Prep' : 'Start Prep'}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -209,7 +217,7 @@ export default function MatchPrepClient({
 
                   {/* Scouting tab */}
                   {currentTab === 'scouting' && (
-                    isActive ? (
+                    isActive && role === 'coach' ? (
                       <div className="px-4 py-4 space-y-4">
                         <h4 className="text-sm font-semibold text-white">Opponent Analysis — {match.opponent}</h4>
                         <div className="grid grid-cols-2 gap-4">
@@ -299,7 +307,7 @@ export default function MatchPrepClient({
 
                   {/* Lineup tab */}
                   {currentTab === 'lineup' && (
-                    <LineupPanel match={match} players={players} />
+                    <LineupPanel match={match} players={players} readOnly={role === 'player'} />
                   )}
                 </div>
               )}

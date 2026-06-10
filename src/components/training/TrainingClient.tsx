@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { TrainingSession, Exercise, SessionBlock, ExerciseCategory } from '@/types'
+import { TrainingSession, Exercise, SessionBlock, ExerciseCategory, UserRole } from '@/types'
 import Link from 'next/link'
 import {
   Plus, X, Trash2, Pencil, ChevronLeft, ChevronRight,
@@ -106,12 +106,13 @@ function newTempId() { return `t${++_tid}` }
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function TrainingClient({
-  sessions, teamId, matches, exercises,
+  sessions, teamId, matches, exercises, role = 'coach',
 }: {
   sessions: TrainingSession[]
   teamId: string | null | undefined
   matches: MatchBasic[]
   exercises: Exercise[]
+  role?: UserRole
 }) {
   const router = useRouter()
   const supabase = createClient()
@@ -298,23 +299,25 @@ export default function TrainingClient({
       {/* ── Top header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Training Planner</h1>
-          <p className="text-gray-400 text-sm mt-0.5">{sessions.length} sessions · {exercises.length} exercises</p>
+          <h1 className="text-2xl font-bold text-white">Training</h1>
+          <p className="text-gray-400 text-sm mt-0.5">{sessions.length} sessions</p>
         </div>
-        <div className="flex bg-gray-800 rounded-lg p-1">
-          <button
-            onClick={() => setTab('sessions')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${tab === 'sessions' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
-          >
-            <Calendar size={13} /> Sessions
-          </button>
-          <button
-            onClick={() => setTab('library')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${tab === 'library' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
-          >
-            <BookOpen size={13} /> Library
-          </button>
-        </div>
+        {role === 'coach' && (
+          <div className="flex bg-gray-800 rounded-lg p-1">
+            <button
+              onClick={() => setTab('sessions')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${tab === 'sessions' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+            >
+              <Calendar size={13} /> Sessions
+            </button>
+            <button
+              onClick={() => setTab('library')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${tab === 'library' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+            >
+              <BookOpen size={13} /> Library
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ════════════════════════════════════════════════════════════
@@ -338,7 +341,7 @@ export default function TrainingClient({
                 <List size={13} /> List
               </button>
             </div>
-            {view === 'list' && (
+            {view === 'list' && role === 'coach' && (
               <button
                 onClick={() => { resetSessionForm(); setShowForm(true) }}
                 className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
@@ -398,11 +401,13 @@ export default function TrainingClient({
                           const mins = blks.reduce((sum, b) => sum + b.duration, 0)
                           return (
                             <div key={s.id} className="relative group">
-                              <button onClick={(e) => { e.stopPropagation(); deleteSession(s.id) }}
-                                className="absolute -top-1 -right-1 w-4 h-4 bg-gray-700 hover:bg-red-500 rounded-full items-center justify-center hidden group-hover:flex transition-colors z-10">
-                                <X size={8} />
-                              </button>
-                              <div onClick={() => startEdit(s)} className="bg-gray-800 hover:bg-gray-700 rounded-lg px-2 py-1.5 cursor-pointer transition-colors">
+                              {role === 'coach' && (
+                                <button onClick={(e) => { e.stopPropagation(); deleteSession(s.id) }}
+                                  className="absolute -top-1 -right-1 w-4 h-4 bg-gray-700 hover:bg-red-500 rounded-full items-center justify-center hidden group-hover:flex transition-colors z-10">
+                                  <X size={8} />
+                                </button>
+                              )}
+                              <div onClick={() => role === 'coach' && startEdit(s)} className={`bg-gray-800 rounded-lg px-2 py-1.5 transition-colors ${role === 'coach' ? 'hover:bg-gray-700 cursor-pointer' : ''}`}>
                                 <p className="text-[11px] text-white font-medium leading-tight line-clamp-2">{s.objective}</p>
                                 {blks.length > 0 && <p className="text-[10px] text-gray-500 mt-0.5">{blks.length} ex · {mins} min</p>}
                                 {s.time && <p className="text-[10px] text-gray-500">{s.time}</p>}
@@ -417,10 +422,12 @@ export default function TrainingClient({
                           {daySessions.map(s => <span key={s.id} className={`w-1.5 h-1.5 rounded-full ${INTENSITY_DOT[s.intensity]}`} />)}
                         </div>
                       )}
-                      <button onClick={() => openFormForDay(dateStr)}
-                        className="mt-2 w-full flex items-center justify-center gap-1 text-[11px] text-gray-600 hover:text-green-400 py-1.5 rounded-lg hover:bg-gray-800/50 transition-colors">
-                        <Plus size={11} /> Add
-                      </button>
+                                      {role === 'coach' && (
+                        <button onClick={() => openFormForDay(dateStr)}
+                          className="mt-2 w-full flex items-center justify-center gap-1 text-[11px] text-gray-600 hover:text-green-400 py-1.5 rounded-lg hover:bg-gray-800/50 transition-colors">
+                          <Plus size={11} /> Add
+                        </button>
+                      )}
                     </div>
                   )
                 })}
@@ -458,12 +465,14 @@ export default function TrainingClient({
                       </div>
                       {activeSessions.length === 0
                         ? <div className="text-center py-6 text-gray-600 text-sm border border-dashed border-gray-800 rounded-xl">Rest day</div>
-                        : activeSessions.map(s => <SessionCard key={s.id} session={s} onEdit={() => startEdit(s)} onDelete={() => deleteSession(s.id)} />)
+                        : activeSessions.map(s => <SessionCard key={s.id} session={s} onEdit={() => startEdit(s)} onDelete={() => deleteSession(s.id)} readOnly={role === 'player'} />)
                       }
-                      <button onClick={() => openFormForDay(activeDay)}
-                        className="w-full flex items-center justify-center gap-2 border border-dashed border-gray-700 hover:border-green-500 text-gray-500 hover:text-green-400 text-sm py-3 rounded-xl transition-colors">
-                        <Plus size={14} /> Add session for this day
-                      </button>
+                      {role === 'coach' && (
+                        <button onClick={() => openFormForDay(activeDay)}
+                          className="w-full flex items-center justify-center gap-2 border border-dashed border-gray-700 hover:border-green-500 text-gray-500 hover:text-green-400 text-sm py-3 rounded-xl transition-colors">
+                          <Plus size={14} /> Add session for this day
+                        </button>
+                      )}
                     </div>
                   )
                 })()}
@@ -481,7 +490,7 @@ export default function TrainingClient({
                 <div key={week}>
                   <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{week}</h2>
                   <div className="space-y-2">
-                    {weekSessions.map(s => <SessionCard key={s.id} session={s} onEdit={() => startEdit(s)} onDelete={() => deleteSession(s.id)} showDate />)}
+                    {weekSessions.map(s => <SessionCard key={s.id} session={s} onEdit={() => startEdit(s)} onDelete={() => deleteSession(s.id)} showDate readOnly={role === 'player'} />)}
                   </div>
                 </div>
               ))}
@@ -757,8 +766,8 @@ function SessionForm({
 
 // ── Session card (list + mobile day view) ─────────────────────────────────────
 
-function SessionCard({ session, onEdit, onDelete, showDate = false }: {
-  session: TrainingSession; onEdit: () => void; onDelete: () => void; showDate?: boolean
+function SessionCard({ session, onEdit, onDelete, showDate = false, readOnly = false }: {
+  session: TrainingSession; onEdit: () => void; onDelete: () => void; showDate?: boolean; readOnly?: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
   const blks = session.session_blocks ?? []
@@ -786,10 +795,14 @@ function SessionCard({ session, onEdit, onDelete, showDate = false }: {
           </div>
         </div>
         <div className="flex gap-3 mt-2">
-          <button onClick={onEdit} className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"><Pencil size={12} /> Edit</button>
-          <button onClick={onDelete} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300"><Trash2 size={12} /> Delete</button>
+          {!readOnly && (
+            <>
+              <button onClick={onEdit} className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"><Pencil size={12} /> Edit</button>
+              <button onClick={onDelete} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300"><Trash2 size={12} /> Delete</button>
+            </>
+          )}
           {blks.length > 0 && (
-            <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 ml-auto">
+            <button onClick={() => setExpanded(!expanded)} className={`flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 ${!readOnly ? 'ml-auto' : ''}`}>
               {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />} Plan
             </button>
           )}

@@ -134,3 +134,9 @@ Board data is stored as `board jsonb` on the `exercises` table.
 Coordinates are absolute within the `100×140` viewBox (not 0–1 relative — unlike tactics board).
 
 SQL migration required: `ALTER TABLE exercises ADD COLUMN IF NOT EXISTS board jsonb;`
+
+---
+
+## Player view (read-only)
+
+Players see the same Sessions tab (Week and List views) but cannot create, edit, or delete sessions. The Library tab is hidden entirely for players. All add/edit/delete controls are gated by the `role` prop passed from the server page. The `SessionCard` component accepts a `readOnly` prop that hides the Edit and Delete buttons.

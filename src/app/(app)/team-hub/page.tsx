@@ -7,7 +7,7 @@ export default async function TeamHubPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*, teams(*)')
+    .select('*, teams(*), role, player_id')
     .eq('id', user!.id)
     .single()
 
@@ -44,6 +44,8 @@ export default async function TeamHubPage() {
       messages={enrichedMessages}
       teamId={profile?.team_id}
       userId={user!.id}
+      role={profile?.role ?? 'coach'}
+      playerId={profile?.player_id ?? null}
     />
   )
 }

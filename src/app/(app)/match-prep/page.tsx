@@ -7,7 +7,7 @@ export default async function MatchPrepPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('team_id')
+    .select('team_id, role')
     .eq('id', user!.id)
     .single()
 
@@ -24,5 +24,12 @@ export default async function MatchPrepPage() {
     .eq('team_id', profile?.team_id)
     .order('name')
 
-  return <MatchPrepClient matches={matches ?? []} players={players ?? []} teamId={profile?.team_id} />
+  return (
+    <MatchPrepClient
+      matches={matches ?? []}
+      players={players ?? []}
+      teamId={profile?.team_id}
+      role={profile?.role ?? 'coach'}
+    />
+  )
 }

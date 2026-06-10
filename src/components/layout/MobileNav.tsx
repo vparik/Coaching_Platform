@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Users, Target, MessageSquare, ClipboardList, ChessKnight } from 'lucide-react'
+import { LayoutDashboard, Users, Dumbbell, Target, MessageSquare, ClipboardList, ChessKnight } from 'lucide-react'
+import { UserRole } from '@/types'
 
-const nav = [
+const coachNav = [
   { href: '/', label: 'Home', icon: LayoutDashboard },
   { href: '/squad', label: 'Squad', icon: Users },
   { href: '/match-prep', label: 'Prep', icon: Target },
@@ -13,8 +14,17 @@ const nav = [
   { href: '/tactics', label: 'Tactics', icon: ChessKnight },
 ]
 
-export default function MobileNav() {
+const playerNav = [
+  { href: '/', label: 'Home', icon: LayoutDashboard },
+  { href: '/training', label: 'Training', icon: Dumbbell },
+  { href: '/match-prep', label: 'Prep', icon: Target },
+  { href: '/team-hub', label: 'Hub', icon: MessageSquare },
+  { href: '/tactics', label: 'Tactics', icon: ChessKnight },
+]
+
+export default function MobileNav({ role }: { role: UserRole }) {
   const pathname = usePathname()
+  const nav = role === 'player' ? playerNav : coachNav
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 flex">

@@ -2,11 +2,23 @@
 
 **Route:** `/squad`
 
-The Squad tab is the coach's single source of truth for the playing group. Every player on the roster lives here with their profile, current availability, and private coaching notes.
+The Squad tab serves two audiences depending on the user's role.
 
 ---
 
-## Player profile fields
+## Coach view
+
+The coach's single source of truth for the playing group. Every player on the roster lives here with their profile, current availability, private coaching notes, and account link status.
+
+### Join Code banner
+Displayed at the top of the Squad tab. The coach shares this 8-character code with players so they can register and self-link. A **Copy** button puts it in the clipboard.
+
+### Player card badges
+Each player card shows one of two badges next to their name:
+- **Green "linked"** — the player has a registered account linked to this record
+- **Grey "no account"** — the player has no registered account yet
+
+### Player profile fields
 
 | Field | Values |
 |---|---|
@@ -15,35 +27,40 @@ The Squad tab is the coach's single source of truth for the playing group. Every
 | Age | Number |
 | Preferred Foot | Left / Right / Both |
 | Nationality | Free text |
-| Private Notes | Free text (only the coach sees this) |
+| Private Notes | Free text (coach only — never visible to players) |
 | Availability Status | Available / Injured / Absent / Unknown |
+
+### Actions
+
+**Add a player** — tap "+ Add Player" to expand the inline form.
+
+**Edit a player** — tap Edit in the expanded panel to pre-fill the form.
+
+**Remove a player** — soft-delete: sets `left_at` on the player row and clears any linked profile's `player_id`. Player history is preserved. Uses the `remove_player_from_team` RPC.
+
+**Unlink account** — visible only for linked players (green badge). Clears the account link without removing the player from the squad. The player can re-claim their record. Uses the `unlink_player_account` RPC.
+
+**Update availability** — inline status dropdown on every card, no form required.
 
 ---
 
-## Actions
+## Player view
 
-### Add a player
-Tap "+ Add Player" to expand the inline form. Fill in the fields and submit — the player appears immediately in the alphabetically sorted list.
+Players see only their own profile card under "My Profile".
 
-### Edit a player
-Tap the edit icon on any player card to pre-fill the form with existing data. Save to update.
+### What players can do
+- Update their own **availability status** (the inline dropdown)
+- **Edit Profile** — opens a form to update name, position, age, preferred foot, nationality (private notes field is hidden)
 
-### Delete a player
-Tap the delete icon. The player is permanently removed from the squad.
-
-### Update availability
-Each player card has quick-tap buttons to cycle the availability status without opening the edit form. Status colours:
-- Green → Available
-- Red → Injured
-- Amber → Absent
-- Grey → Unknown
-
-### Expand a player card
-Tap anywhere on a player row to expand it and see all details including private notes.
+### What players cannot do
+- See other players' profiles
+- See private notes
+- Add or remove players
 
 ---
 
 ## Key behaviour
-- Players are sorted alphabetically by name.
-- Private notes are stored in the database but are never exposed to players — they are only visible on the coach-facing UI.
+- Active squad only: players with `left_at` set are excluded from the coach list.
+- Private notes are stored in the database but never exposed in the player view.
 - Availability counts on the Dashboard are driven by this data.
+- `linkedPlayerIds` is fetched from `profiles` on the server — requires the `profiles_select_team` RLS policy.

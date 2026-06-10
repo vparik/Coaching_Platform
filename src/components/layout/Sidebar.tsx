@@ -4,8 +4,9 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { LayoutDashboard, Users, Dumbbell, Target, MessageSquare, ClipboardList, ChessKnight, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { UserRole } from '@/types'
 
-const nav = [
+const coachNav = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/squad', label: 'Squad', icon: Users },
   { href: '/training', label: 'Training', icon: Dumbbell },
@@ -15,10 +16,28 @@ const nav = [
   { href: '/tactics', label: 'Tactics', icon: ChessKnight },
 ]
 
-export default function Sidebar({ profile }: { profile: { name: string; teams?: { name: string } } | null }) {
+const playerNav = [
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/squad', label: 'My Profile', icon: Users },
+  { href: '/training', label: 'Training', icon: Dumbbell },
+  { href: '/match-prep', label: 'Match Prep', icon: Target },
+  { href: '/team-hub', label: 'Team Hub', icon: MessageSquare },
+  { href: '/matches', label: 'Match Log', icon: ClipboardList },
+  { href: '/tactics', label: 'Tactics', icon: ChessKnight },
+]
+
+interface SidebarProfile {
+  name: string
+  role?: UserRole
+  teams?: { name: string } | null
+}
+
+export default function Sidebar({ profile }: { profile: SidebarProfile | null }) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+
+  const nav = profile?.role === 'player' ? playerNav : coachNav
 
   async function signOut() {
     await supabase.auth.signOut()

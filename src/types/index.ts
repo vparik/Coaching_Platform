@@ -6,6 +6,7 @@ export interface Profile {
   email: string
   role: UserRole
   team_id: string | null
+  player_id: string | null
   created_at: string
 }
 
@@ -13,6 +14,7 @@ export interface Team {
   id: string
   name: string
   coach_id: string
+  join_code: string
   created_at: string
 }
 
@@ -26,6 +28,7 @@ export interface Player {
   nationality: string | null
   private_notes: string | null
   availability_status: 'available' | 'injured' | 'absent' | 'unknown'
+  left_at: string | null
   created_at: string
 }
 

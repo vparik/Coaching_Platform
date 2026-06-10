@@ -55,6 +55,7 @@ src/
     auth/
       login/page.tsx
       signup/page.tsx
+      claim/page.tsx              # Player profile claim step (runs once after player signup)
   components/
     layout/
       Sidebar.tsx               # Desktop left nav
@@ -98,9 +99,9 @@ Do not break this pattern. Do not add API routes or server actions.
 
 | Table | Purpose |
 |---|---|
-| `profiles` | One row per user; links to `teams` via `team_id` |
-| `teams` | One team per coach |
-| `players` | Squad members; `availability_status`: available / injured / absent / unknown |
+| `profiles` | One row per user; links to `teams` via `team_id`; `role`: coach / player; `player_id` links a player account to their squad record |
+| `teams` | One team per coach; `join_code` (8-char uppercase) shared with players to register |
+| `players` | Squad members; `availability_status`: available / injured / absent / unknown; `left_at` timestamptz for soft-delete |
 | `training_sessions` | Sessions with date, time, objective, intensity (low/medium/high), phase (recovery/prep/development) |
 | `matches` | All fixtures; `venue`: home / away / neutral; `result` is a score string e.g. "2-1" |
 | `match_preps` | One-to-one with `matches`; stores opponent scouting data and match brief |

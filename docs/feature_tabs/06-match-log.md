@@ -66,3 +66,9 @@ The result chip on past match cards is colour-coded automatically based on the s
 - A match added here also becomes available in Match Prep (upcoming) and will appear in the Dashboard "Next Match" widget.
 - Player ratings are stored per-match and per-player. Re-saving ratings for a match replaces all previous ratings for that match (delete + re-insert).
 - The result field accepts any string, but the W/D/L colour logic parses it as "ourScore-theirScore".
+
+---
+
+## Player view
+
+Players see the full match list (upcoming + past) but cannot add matches or rate players. When a player expands a match, they see only their own rating (fetched by matching their `player_id` from the ratings array). No rating form is shown. The `role` and `playerId` props are passed from the server page.

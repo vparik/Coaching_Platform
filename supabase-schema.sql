@@ -16,12 +16,17 @@ create table teams (
   id uuid primary key default uuid_generate_v4(),
   name text not null,
   coach_id uuid references profiles(id) on delete cascade not null,
+  join_code text unique not null,
   created_at timestamptz default now()
 );
 
 -- Add FK from profiles to teams
 alter table profiles add constraint profiles_team_id_fkey
   foreign key (team_id) references teams(id) on delete set null;
+
+-- player_id links a profile to its roster record (added after players table exists)
+-- alter table profiles add column player_id uuid references players(id) on delete set null;
+-- ^ run this after players table is created, or use player-access-migration.sql
 
 -- Players
 create table players (
@@ -35,10 +40,22 @@ create table players (
   private_notes text,
   availability_status text not null default 'available'
     check (availability_status in ('available', 'injured', 'absent', 'unknown')),
+  left_at timestamptz,
   created_at timestamptz default now()
 );
 
 -- Training Sessions
+create table exercises (
+  id uuid primary key default uuid_generate_v4(),
+  team_id uuid references teams(id) on delete cascade not null,
+  name text not null,
+  category text not null default 'general',
+  default_duration integer not null default 15,
+  description text,
+  board jsonb,
+  created_at timestamptz default now()
+);
+
 create table training_sessions (
   id uuid primary key default uuid_generate_v4(),
   team_id uuid references teams(id) on delete cascade not null,
@@ -49,6 +66,15 @@ create table training_sessions (
   phase text not null default 'prep' check (phase in ('recovery', 'prep', 'development')),
   notes text,
   created_at timestamptz default now()
+);
+
+create table session_blocks (
+  id uuid primary key default uuid_generate_v4(),
+  session_id uuid references training_sessions(id) on delete cascade not null,
+  exercise_id uuid references exercises(id) on delete set null,
+  free_text text,
+  duration integer not null default 15,
+  position integer not null default 0
 );
 
 -- Matches
@@ -118,7 +144,9 @@ create table message_views (
 alter table profiles enable row level security;
 alter table teams enable row level security;
 alter table players enable row level security;
+alter table exercises enable row level security;
 alter table training_sessions enable row level security;
+alter table session_blocks enable row level security;
 alter table matches enable row level security;
 alter table match_preps enable row level security;
 alter table player_ratings enable row level security;
@@ -156,11 +184,27 @@ create policy "players_insert" on players for insert with check (is_team_coach(t
 create policy "players_update" on players for update using (is_team_coach(team_id));
 create policy "players_delete" on players for delete using (is_team_coach(team_id));
 
+-- Exercises
+create policy "exercises_select" on exercises for select using (is_team_member(team_id));
+create policy "exercises_insert" on exercises for insert with check (is_team_coach(team_id));
+create policy "exercises_update" on exercises for update using (is_team_coach(team_id));
+create policy "exercises_delete" on exercises for delete using (is_team_coach(team_id));
+
 -- Training Sessions
 create policy "training_select" on training_sessions for select using (is_team_member(team_id));
 create policy "training_insert" on training_sessions for insert with check (is_team_coach(team_id));
 create policy "training_update" on training_sessions for update using (is_team_coach(team_id));
 create policy "training_delete" on training_sessions for delete using (is_team_coach(team_id));
+
+-- Session Blocks (scoped through training_sessions)
+create policy "blocks_select" on session_blocks for select
+  using (exists (select 1 from training_sessions ts where ts.id = session_id and is_team_member(ts.team_id)));
+create policy "blocks_insert" on session_blocks for insert
+  with check (exists (select 1 from training_sessions ts where ts.id = session_id and is_team_coach(ts.team_id)));
+create policy "blocks_update" on session_blocks for update
+  using (exists (select 1 from training_sessions ts where ts.id = session_id and is_team_coach(ts.team_id)));
+create policy "blocks_delete" on session_blocks for delete
+  using (exists (select 1 from training_sessions ts where ts.id = session_id and is_team_coach(ts.team_id)));
 
 -- Matches
 create policy "matches_select" on matches for select using (is_team_member(team_id));
@@ -204,26 +248,42 @@ create or replace function handle_new_user()
 returns trigger language plpgsql security definer as $$
 declare
   new_team_id uuid;
+  user_role text;
 begin
-  -- Create profile first (no team yet)
-  insert into profiles (id, name, email, role)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
-    new.email,
-    'coach'
-  );
+  user_role := coalesce(new.raw_user_meta_data->>'role', 'coach');
 
-  -- Create team
-  insert into teams (name, coach_id)
-  values (
-    coalesce(new.raw_user_meta_data->>'team_name', 'My Team'),
-    new.id
-  )
-  returning id into new_team_id;
+  if user_role = 'player' then
+    select id into new_team_id
+    from teams
+    where join_code = upper(trim(new.raw_user_meta_data->>'join_code'));
 
-  -- Link profile to team
-  update profiles set team_id = new_team_id where id = new.id;
+    insert into profiles (id, name, email, role, team_id)
+    values (
+      new.id,
+      coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+      new.email,
+      'player',
+      new_team_id
+    );
+  else
+    insert into profiles (id, name, email, role)
+    values (
+      new.id,
+      coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+      new.email,
+      'coach'
+    );
+
+    insert into teams (name, coach_id, join_code)
+    values (
+      coalesce(new.raw_user_meta_data->>'team_name', 'My Team'),
+      new.id,
+      upper(substring(replace(gen_random_uuid()::text, '-', ''), 1, 8))
+    )
+    returning id into new_team_id;
+
+    update profiles set team_id = new_team_id where id = new.id;
+  end if;
 
   return new;
 end;
@@ -253,3 +313,125 @@ create policy "tactics_select" on tactics for select using (is_team_coach(team_i
 create policy "tactics_insert" on tactics for insert with check (is_team_coach(team_id));
 create policy "tactics_update" on tactics for update using (is_team_coach(team_id));
 create policy "tactics_delete" on tactics for delete using (is_team_coach(team_id));
+
+-- ============================================================
+-- Player Access — RPCs and updated policies
+-- ============================================================
+
+-- Allow players to update their own linked player record
+drop policy if exists "players_update" on players;
+create policy "players_update" on players for update
+  using (
+    is_team_coach(team_id)
+    or exists (
+      select 1 from profiles
+      where id = auth.uid() and player_id = players.id
+    )
+  );
+
+-- Look up team by join code — callable by anon key for signup validation
+create or replace function lookup_team_by_join_code(code text)
+returns table(id uuid, name text)
+language sql security definer as $$
+  select id, name from teams where join_code = upper(trim(code));
+$$;
+
+grant execute on function lookup_team_by_join_code(text) to anon, authenticated;
+
+-- Get claimable players for the current user's team
+create or replace function get_claimable_players()
+returns table(id uuid, name text, "position" text, was_member boolean)
+language plpgsql security definer as $$
+declare
+  v_team_id uuid;
+begin
+  select team_id into v_team_id from profiles where id = auth.uid();
+  if v_team_id is null then return; end if;
+
+  return query
+    select
+      p.id,
+      p.name,
+      p.position,
+      (p.left_at is not null) as was_member
+    from players p
+    where p.team_id = v_team_id
+      and p.id not in (
+        select pr.player_id from profiles pr where pr.player_id is not null
+      )
+    order by p.left_at nulls first, p.name;
+end;
+$$;
+
+grant execute on function get_claimable_players() to authenticated;
+
+-- Claim a player record (or create a new one via "Add myself")
+create or replace function claim_player_record(p_player_id uuid, p_name text)
+returns void
+language plpgsql security definer as $$
+declare
+  v_team_id uuid;
+  v_new_player_id uuid;
+begin
+  select team_id into v_team_id from profiles where id = auth.uid();
+  if v_team_id is null then
+    raise exception 'No team associated with this account';
+  end if;
+
+  if p_player_id is not null then
+    if not exists (
+      select 1 from players
+      where id = p_player_id
+        and team_id = v_team_id
+        and id not in (select pr.player_id from profiles pr where pr.player_id is not null)
+    ) then
+      raise exception 'Player record not available for claiming';
+    end if;
+
+    update players set left_at = null where id = p_player_id;
+    update profiles set player_id = p_player_id where id = auth.uid();
+  else
+    if p_name is null or trim(p_name) = '' then
+      raise exception 'Name is required';
+    end if;
+
+    insert into players (team_id, name)
+    values (v_team_id, trim(p_name))
+    returning id into v_new_player_id;
+
+    update profiles set player_id = v_new_player_id where id = auth.uid();
+  end if;
+end;
+$$;
+
+grant execute on function claim_player_record(uuid, text) to authenticated;
+
+-- Allow coaches/team members to see all profiles in their team
+drop policy if exists "profiles_select_team" on profiles;
+create policy "profiles_select_team" on profiles for select
+  using (team_id is not null and is_team_member(team_id));
+
+-- Soft-delete: remove player from team and clear any linked profile
+create or replace function remove_player_from_team(p_player_id uuid)
+returns void
+language plpgsql security definer as $$
+declare
+  v_team_id uuid;
+begin
+  select p.team_id into v_team_id
+  from players p
+  join profiles pr on pr.id = auth.uid()
+  where p.id = p_player_id
+    and p.team_id = pr.team_id
+    and pr.role = 'coach';
+
+  if v_team_id is null then
+    raise exception 'Not authorized';
+  end if;
+
+  update players set left_at = now() where id = p_player_id;
+  update profiles set player_id = null where player_id = p_player_id;
+end;
+$$;
+
+grant execute on function remove_player_from_team(uuid) to authenticated;

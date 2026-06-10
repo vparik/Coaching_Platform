@@ -15,6 +15,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .eq('id', user.id)
     .single()
 
+  // Player who joined a team but hasn't claimed their player record yet
+  if (profile?.role === 'player' && !profile?.player_id) {
+    redirect('/auth/claim')
+  }
+
   return (
     <div className="min-h-screen bg-gray-950 text-white flex">
       <Sidebar profile={profile} />
@@ -23,7 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </div>
       </main>
-      <MobileNav />
+      <MobileNav role={profile?.role ?? 'coach'} />
     </div>
   )
 }

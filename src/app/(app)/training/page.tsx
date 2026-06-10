@@ -7,11 +7,13 @@ export default async function TrainingPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('team_id')
+    .select('team_id, role')
     .eq('id', user!.id)
     .single()
 
-  const [{ data: sessionsRaw }, { data: matches }, { data: exercises }] = await Promise.all([
+  const isPlayer = profile?.role === 'player'
+
+  const [{ data: sessionsRaw }, { data: matches }, exercisesResult] = await Promise.all([
     supabase
       .from('training_sessions')
       .select('*, session_blocks(id, exercise_id, free_text, duration, position, exercises(id, name, category))')
@@ -22,11 +24,13 @@ export default async function TrainingPage() {
       .select('id, opponent, date, venue')
       .eq('team_id', profile?.team_id)
       .order('date', { ascending: true }),
-    supabase
-      .from('exercises')
-      .select('*')
-      .eq('team_id', profile?.team_id)
-      .order('name', { ascending: true }),
+    isPlayer
+      ? Promise.resolve({ data: [] })
+      : supabase
+          .from('exercises')
+          .select('*')
+          .eq('team_id', profile?.team_id)
+          .order('name', { ascending: true }),
   ])
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -37,7 +41,8 @@ export default async function TrainingPage() {
       sessions={sessions}
       teamId={profile?.team_id}
       matches={matches ?? []}
-      exercises={exercises ?? []}
+      exercises={exercisesResult.data ?? []}
+      role={profile?.role ?? 'coach'}
     />
   )
 }

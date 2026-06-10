@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { Maximize2, X, RotateCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { Tactic, PlayerPos } from '@/types'
+import { Tactic, PlayerPos, UserRole } from '@/types'
 import { OUR_FORMATIONS, FORMATION_NAMES, mirror } from '@/lib/formations'
 import { FullPitchMarkings } from '@/components/shared/FullPitchMarkings'
 import { FormationSelectors } from '@/components/shared/FormationSelectors'
@@ -88,9 +88,11 @@ function PitchSVG({ ourPositions, oppPositions, dragging, onPointerDown, onPoint
 export default function TacticsClient({
   tactics: initialTactics,
   teamId,
+  role = 'coach',
 }: {
   tactics: Tactic[]
   teamId: string | null | undefined
+  role?: UserRole
 }) {
   const [ourPositions, setOurPositions] = useState<PlayerPos[]>(OUR_FORMATIONS[DEFAULT_FORMATION])
   const [oppPositions, setOppPositions] = useState<PlayerPos[]>(mirror(OUR_FORMATIONS[DEFAULT_FORMATION]))
@@ -232,7 +234,9 @@ export default function TacticsClient({
       <div className="space-y-5">
         <div>
           <h1 className="text-2xl font-bold text-white">Tactics</h1>
-          <p className="text-gray-400 text-sm mt-1">Build formations and save tactical setups</p>
+          <p className="text-gray-400 text-sm mt-1">
+            {role === 'coach' ? 'Build formations and save tactical setups' : 'Study team formations and tactics'}
+          </p>
         </div>
 
         <FormationSelectors ourFormation={ourFormation} oppFormation={oppFormation} onChange={applyFormation} onSwap={swapSides} />
@@ -260,23 +264,25 @@ export default function TacticsClient({
 
         {teamLabels}
 
-        {/* Save */}
-        <div className="flex gap-2">
-          <input
-            value={tacticName}
-            onChange={e => setTacticName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && saveTactic()}
-            placeholder="Name this tactic…"
-            className="flex-1 bg-gray-900 border border-gray-800 text-white text-sm rounded-lg px-3 py-2.5 placeholder-gray-500 focus:outline-none focus:border-green-600"
-          />
-          <button
-            onClick={saveTactic}
-            disabled={!tacticName.trim() || saving}
-            className="bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
+        {/* Save — coach only */}
+        {role === 'coach' && (
+          <div className="flex gap-2">
+            <input
+              value={tacticName}
+              onChange={e => setTacticName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && saveTactic()}
+              placeholder="Name this tactic…"
+              className="flex-1 bg-gray-900 border border-gray-800 text-white text-sm rounded-lg px-3 py-2.5 placeholder-gray-500 focus:outline-none focus:border-green-600"
+            />
+            <button
+              onClick={saveTactic}
+              disabled={!tacticName.trim() || saving}
+              className="bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        )}
 
         {/* Load saved tactic */}
         {tactics.length > 0 && (
@@ -291,7 +297,7 @@ export default function TacticsClient({
                 <option value="">Select a tactic…</option>
                 {tactics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
-              {selectedTacticId && (
+              {selectedTacticId && role === 'coach' && (
                 <button
                   onClick={() => deleteTactic(selectedTacticId)}
                   className="text-red-400 hover:text-red-300 text-sm px-3 py-2.5 rounded-lg border border-gray-800 hover:bg-gray-900 transition-colors"

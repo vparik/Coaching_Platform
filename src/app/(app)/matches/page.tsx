@@ -7,7 +7,7 @@ export default async function MatchesPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('team_id')
+    .select('team_id, role, player_id')
     .eq('id', user!.id)
     .single()
 
@@ -34,6 +34,8 @@ export default async function MatchesPage() {
       players={players ?? []}
       ratings={ratings ?? []}
       teamId={profile?.team_id}
+      role={profile?.role ?? 'coach'}
+      playerId={profile?.player_id ?? null}
     />
   )
 }

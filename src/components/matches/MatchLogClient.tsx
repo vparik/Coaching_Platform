@@ -3,18 +3,20 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Match, PlayerRating } from '@/types'
+import { Match, PlayerRating, UserRole } from '@/types'
 import { Plus, X, ChevronDown, ChevronUp, Pencil } from 'lucide-react'
 
 interface PlayerBasic { id: string; name: string; position: string }
 
 export default function MatchLogClient({
-  matches, players, ratings, teamId,
+  matches, players, ratings, teamId, role = 'coach', playerId = null,
 }: {
   matches: Match[]
   players: PlayerBasic[]
   ratings: PlayerRating[]
   teamId: string | null | undefined
+  role?: UserRole
+  playerId?: string | null
 }) {
   const [showForm, setShowForm] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -88,15 +90,17 @@ export default function MatchLogClient({
           <h1 className="text-2xl font-bold text-white">Match Log</h1>
           <p className="text-gray-400 text-sm mt-0.5">{matches.length} matches total</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={16} /> Add Match
-        </button>
+        {role === 'coach' && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus size={16} /> Add Match
+          </button>
+        )}
       </div>
 
-      {showForm && (
+      {showForm && role === 'coach' && (
         <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-white">Add Match</h2>
@@ -147,7 +151,7 @@ export default function MatchLogClient({
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Upcoming</h2>
           <MatchList matches={upcoming} players={players} ratings={ratings} expanded={expanded} ratingMatch={ratingMatch}
             playerRatings={playerRatings} setExpanded={setExpanded} startRatings={startRatings} saveRatings={saveRatings}
-            setPlayerRatings={setPlayerRatings} setRatingMatch={setRatingMatch} getResult={getResult} />
+            setPlayerRatings={setPlayerRatings} setRatingMatch={setRatingMatch} getResult={getResult} role={role} playerId={playerId} />
         </section>
       )}
 
@@ -156,7 +160,7 @@ export default function MatchLogClient({
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Past Matches</h2>
           <MatchList matches={past} players={players} ratings={ratings} expanded={expanded} ratingMatch={ratingMatch}
             playerRatings={playerRatings} setExpanded={setExpanded} startRatings={startRatings} saveRatings={saveRatings}
-            setPlayerRatings={setPlayerRatings} setRatingMatch={setRatingMatch} getResult={getResult} />
+            setPlayerRatings={setPlayerRatings} setRatingMatch={setRatingMatch} getResult={getResult} role={role} playerId={playerId} />
         </section>
       )}
 
@@ -170,6 +174,7 @@ export default function MatchLogClient({
 function MatchList({
   matches, players, ratings, expanded, ratingMatch, playerRatings,
   setExpanded, startRatings, saveRatings, setPlayerRatings, setRatingMatch, getResult,
+  role = 'coach', playerId = null,
 }: {
   matches: Match[]
   players: PlayerBasic[]
@@ -183,6 +188,8 @@ function MatchList({
   setPlayerRatings: React.Dispatch<React.SetStateAction<Record<string, number>>>
   setRatingMatch: (id: string | null) => void
   getResult: (r: string | null) => { label: string; color: string } | null
+  role?: UserRole
+  playerId?: string | null
 }) {
   return (
     <div className="space-y-2">
@@ -224,48 +231,65 @@ function MatchList({
               <div className="border-t border-gray-800 px-4 py-3 space-y-4">
                 {match.notes && <p className="text-sm text-gray-300">{match.notes}</p>}
 
-                {matchRatings.length > 0 && !isRating && (
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">Player Ratings</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {matchRatings.map(r => {
-                        const player = players.find(p => p.id === r.player_id)
-                        return (
-                          <div key={r.id} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-1.5">
-                            <span className="text-xs text-gray-300">{player?.name ?? '?'}</span>
-                            <span className="text-xs font-semibold text-white">{r.rating}/10</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {isRating ? (
-                  <div className="space-y-3">
-                    <p className="text-xs text-gray-500">Rate Players (1–10, leave 0 to skip)</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {players.map(p => (
-                        <div key={p.id} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
-                          <span className="text-xs text-gray-300">{p.name}</span>
-                          <input
-                            type="number" min={0} max={10}
-                            value={playerRatings[p.id] ?? 0}
-                            onChange={e => setPlayerRatings(prev => ({ ...prev, [p.id]: parseInt(e.target.value) || 0 }))}
-                            className="w-12 bg-gray-700 text-white text-xs text-center rounded px-2 py-1 focus:outline-none"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-3">
-                      <button onClick={() => saveRatings(match.id)} className="bg-green-600 hover:bg-green-500 text-white text-xs font-medium px-4 py-2 rounded-lg">Save Ratings</button>
-                      <button onClick={() => setRatingMatch(null)} className="text-gray-400 text-xs px-3 py-2 hover:text-white">Cancel</button>
-                    </div>
-                  </div>
+                {role === 'player' ? (
+                  (() => {
+                    const myRating = matchRatings.find(r => r.player_id === playerId)
+                    return myRating ? (
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Your Rating</p>
+                        <p className="text-2xl font-bold text-white">{myRating.rating}<span className="text-sm text-gray-500 font-normal">/10</span></p>
+                        {myRating.notes && <p className="text-xs text-gray-400 mt-1">{myRating.notes}</p>}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-600">No rating yet</p>
+                    )
+                  })()
                 ) : (
-                  <button onClick={() => startRatings(match.id)} className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300">
-                    <Pencil size={12} /> {matchRatings.length > 0 ? 'Edit Ratings' : 'Add Ratings'}
-                  </button>
+                  <>
+                    {matchRatings.length > 0 && !isRating && (
+                      <div>
+                        <p className="text-xs text-gray-500 mb-2">Player Ratings</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {matchRatings.map(r => {
+                            const player = players.find(p => p.id === r.player_id)
+                            return (
+                              <div key={r.id} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-1.5">
+                                <span className="text-xs text-gray-300">{player?.name ?? '?'}</span>
+                                <span className="text-xs font-semibold text-white">{r.rating}/10</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {isRating ? (
+                      <div className="space-y-3">
+                        <p className="text-xs text-gray-500">Rate Players (1–10, leave 0 to skip)</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {players.map(p => (
+                            <div key={p.id} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
+                              <span className="text-xs text-gray-300">{p.name}</span>
+                              <input
+                                type="number" min={0} max={10}
+                                value={playerRatings[p.id] ?? 0}
+                                onChange={e => setPlayerRatings(prev => ({ ...prev, [p.id]: parseInt(e.target.value) || 0 }))}
+                                className="w-12 bg-gray-700 text-white text-xs text-center rounded px-2 py-1 focus:outline-none"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex gap-3">
+                          <button onClick={() => saveRatings(match.id)} className="bg-green-600 hover:bg-green-500 text-white text-xs font-medium px-4 py-2 rounded-lg">Save Ratings</button>
+                          <button onClick={() => setRatingMatch(null)} className="text-gray-400 text-xs px-3 py-2 hover:text-white">Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => startRatings(match.id)} className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300">
+                        <Pencil size={12} /> {matchRatings.length > 0 ? 'Edit Ratings' : 'Add Ratings'}
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             )}

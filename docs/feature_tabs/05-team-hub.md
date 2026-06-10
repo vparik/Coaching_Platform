@@ -45,3 +45,9 @@ Tap the delete icon on any message card to remove it (coach only).
 - The Dashboard "Team Hub" widget shows the 3 most recent messages as a preview.
 - View counts update in real time as players read messages.
 - The `total_players` count used for the "X / Y" fraction is pulled from the live squad size at render time.
+
+---
+
+## Player view
+
+Players see the message feed but have no compose form and no delete button. On page mount, a `useEffect` inserts a `message_views` row for every message in the feed, recording the player's read receipt. View count de-duplication is handled server-side using a `Set` — duplicate view rows don't inflate the count.
